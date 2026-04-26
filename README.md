@@ -214,3 +214,10 @@ Thanks to the following repositories for inspiring this repository
 
 ### :sparkles: **Git Pull**
 Personal experience is limited, and code submissions are welcome.
+
+### Star History
+<p align="center">
+    <a href="https://star-history.com/#lingxitong/MIL_BASELINE" target="_blank">
+        <img width="500" src="https://api.star-history.com/svg?repos=lingxitong/MIL_BASELINE&type=Date" alt="Star History Chart">
+    </a>
+<p>
