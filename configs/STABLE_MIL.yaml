@@ -1,5 +1,5 @@
 General:
-    MODEL_NAME: TRANS_MIL
+    MODEL_NAME: STABLE_MIL
     seed: 2024
     num_classes: 2
     num_epochs: 5
@@ -15,6 +15,7 @@ Dataset:
     DATASET_NAME: CAMELYON_CONCH
     dataset_csv_path: /data_sde/zbr/MIL_BASELINE/datasets/CAMELYON_CONCH_split.csv
     dataset_root_dir: {}
+    # STABLE_MIL was designed around coords preprocessing. Prefer .h5 with coords or .pt dicts containing coords.
     balanced_sampler:
         use: False
         replacement: True
@@ -25,11 +26,19 @@ Logs:
 Model:
     in_dim: 512  # Check the real CONCH feature dim on the server; override with --options Model.in_dim=...
     hidden_dim: 512
+    depth: 3
     num_heads: 8
-    num_landmarks: null  # null keeps original TransMIL default: hidden_dim // 2
-    pinv_iterations: 6
+    aggregate_num: 128
+    k_neighbors: 8
+    max_dist: 8.48528137423857  # 6 * sqrt(2), from StableMIL
+    ratio: 2
+    coord_scale: 512.0  # Original preprocessing uses coords // 512
+    learnable_mapping: False
+    mlp_ratio: 4.0
+    qkv_bias: False
+    qk_norm: False
     dropout: 0.1
-    act: relu
+    act: gelu
     optimizer:
         which: adam
         adam_config:

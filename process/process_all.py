@@ -13,15 +13,27 @@ def process(args,yaml_path,options):
     elif args.General.MODEL_NAME == 'AB_MIL':
         from .AB_MIL.process_ab_mil import process_AB_MIL
         process_AB_MIL(args)
+    elif args.General.MODEL_NAME == 'MO_MIL':
+        from .MO_MIL.process_mo_mil import process_MO_MIL
+        process_MO_MIL(args)
     elif args.General.MODEL_NAME == 'GATE_AB_MIL':
         from .GATE_AB_MIL.process_gate_ab_mil import process_GATE_AB_MIL
         process_GATE_AB_MIL(args)
     elif args.General.MODEL_NAME == 'WIKG_MIL':
         from .WIKG_MIL.process_wikg_mil import process_WIKG_MIL
         process_WIKG_MIL(args)
+    elif args.General.MODEL_NAME == 'FOURIERMIL':
+        from .FOURIERMIL.process_fouriermil import process_FOURIERMIL
+        process_FOURIERMIL(args)
     elif args.General.MODEL_NAME == 'TRANS_MIL':
         from .TRANS_MIL.process_trans_mil import process_TRANS_MIL
         process_TRANS_MIL(args)
+    elif args.General.MODEL_NAME == 'PSA_MIL':
+        from .PSA_MIL.process_psa_mil import process_PSA_MIL
+        process_PSA_MIL(args)
+    elif args.General.MODEL_NAME == 'STABLE_MIL':
+        from .STABLE_MIL.process_stable_mil import process_STABLE_MIL
+        process_STABLE_MIL(args)
     elif args.General.MODEL_NAME == 'CLAM_SB_MIL':
         from .CLAM_SB_MIL.process_clam_sb_mil import process_CLAM_SB_MIL
         process_CLAM_SB_MIL(args)

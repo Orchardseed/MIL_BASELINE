@@ -105,6 +105,7 @@ This project was originally developed for our previous work and is continuously 
 * MIXUP_MIL [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412) (ICLR 2018)
 * DT_MIL [Deformable Transformer for Multi-instance Learning on Histopathological Image](https://link.springer.com/chapter/10.1007/978-3-030-87237-3_20) (MICCAI 2021)
 * TRANS_MIL [Transformer based Correlated Multiple Instance Learning for WSI Classification](https://arxiv.org/abs/2106.00908) (NeurIPS 2021)
+* FOURIERMIL [Fourier filtering-based multiple instance learning for whole slide image analysis](https://doi.org/10.1007/s11263-025-02679-x) (IJCV 2025)
 * DS_MIL [Dual-stream MIL Network for WSI Classification with Self-supervised Contrastive Learning](https://arxiv.org/abs/2011.08939) (CVPR 2021)
 * CLAM_MIL [Data Efficient and Weakly Supervised Computational Pathology on WSI](https://arxiv.org/abs/2004.09666) (NAT BIOMED ENG 2021)
 * PGCN_MIL [Context-Aware Survival Prediction using Patch-based Graph Convolutional Networks](https://github.com/mahmoodlab/Patch-GCN) (MICCAI 2021)
@@ -140,7 +141,10 @@ This project was originally developed for our previous work and is continuously 
 * AEM_MIL [Attention Entropy Maximization for MIL based WSI Classification](https://arxiv.org/abs/2406.15303) (MICCAI 2025)
 * MICO_MIL [Multiple Instance Learning with Context-Aware Clustering](https://arxiv.org/abs/2506.18028) (MICCAI 2025)
 * TDA_MIL [Top-Down Attention-based Multiple Instance Learning for Whole Slide Image Analysis](https://link.springer.com/chapter/10.1007/978-3-032-04927-8_62) (MICCAI 2025)
+* PSA_MIL [Probabilistic Spatial Attention-Based Multiple Instance Learning for Whole Slide Image Classification](https://arxiv.org/abs/2503.16284) (WACV 2026)
+* STABLE_MIL [Entropy-Stabilized Attention-based Multiple Instance Learning for Morphologically Variable Whole Slide Images]() (TODO)
 * GDF_MIL [Rethinking Multi-Instance Learning through Graph-Driven Fusion]() (AAAI 2026)
+* MO_MIL [MoMIL: Multi-order Enhanced Multiple Instance Learning for Computational Pathology](https://www.sciencedirect.com/science/article/abs/pii/S0262885626000247) (Image and Vision Computing 2026)
 * UPDATING...
 
 ### ☑️  Implementated Metrics

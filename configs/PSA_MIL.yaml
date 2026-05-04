@@ -1,5 +1,5 @@
 General:
-    MODEL_NAME: TRANS_MIL
+    MODEL_NAME: PSA_MIL
     seed: 2024
     num_classes: 2
     num_epochs: 5
@@ -15,6 +15,7 @@ Dataset:
     DATASET_NAME: CAMELYON_CONCH
     dataset_csv_path: /data_sde/zbr/MIL_BASELINE/datasets/CAMELYON_CONCH_split.csv
     dataset_root_dir: {}
+    # PSA_MIL uses spatial priors. Prefer .h5 with coords or .pt dicts containing coords.
     balanced_sampler:
         use: False
         replacement: True
@@ -24,20 +25,29 @@ Logs:
 
 Model:
     in_dim: 512  # Check the real CONCH feature dim on the server; override with --options Model.in_dim=...
-    hidden_dim: 512
-    num_heads: 8
-    num_landmarks: null  # null keeps original TransMIL default: hidden_dim // 2
-    pinv_iterations: 6
+    attn_dim: 192
+    num_heads: 3
+    depth: 1
+    num_layers_adapter: 2
+    patch_drop_rate: 0.0
+    qkv_bias: True
+    pool_type: attention  # Original PSA configs use attention pooling
+    mlp_ratio: 4.0
+    decay_type: Gaussian
+    decay_clip: 0.001
+    min_local_k: 1
+    max_local_k: 25
+    init_k: 7
     dropout: 0.1
     act: relu
     optimizer:
         which: adam
         adam_config:
-            lr: 0.0002
-            weight_decay: 0.00001
+            lr: 0.0001
+            weight_decay: 0.00005
         adamw_config:
-            lr: 0.0002
-            weight_decay: 0.00001
+            lr: 0.0001
+            weight_decay: 0.00005
     criterion: ce
     scheduler:
         warmup: 2

@@ -1,33 +1,39 @@
 General:
-    MODEL_NAME: MAMBA_MIL
+    MODEL_NAME: FOURIERMIL
     seed: 2024
     num_classes: 2
     num_epochs: 5
-    device: 1
+    device: 0
     num_workers: 4
-    best_model_metric: macro_auc  
-    earlystop: 
+    best_model_metric: macro_auc
+    earlystop:
         use: False
         patience: 5
         metric: macro_auc
 
 Dataset:
-    DATASET_NAME: your_dataset_name
-    dataset_csv_path: /path/to/your/dataset.csv
+    DATASET_NAME: CAMELYON_CONCH
+    dataset_csv_path: /data_sde/zbr/MIL_BASELINE/datasets/CAMELYON_CONCH_split.csv
+    dataset_root_dir: {}
     balanced_sampler:
         use: False
         replacement: True
 
 Logs:
-    log_root_dir: /path/to/your/log_dir/
+    log_root_dir: /data_sde/zbr/MIL_BASELINE/logs
 
 Model:
-    in_dim: 1024
+    in_dim: 512  # Check the real CONCH feature dim on the server; override with --options Model.in_dim=...
+    hidden_dim: 512
+    num_layers: 2
+    num_blocks: 8
+    mode: AP  # AP, LP, or HP from FourierMIL APFF filtering
+    sparsity_threshold: 0.01
+    hard_thresholding_fraction: 1.0
+    hidden_size_factor: 1
+    mlp_ratio: 1.0
     dropout: 0.1
     act: relu
-    layer: 2  # Number of Mamba layers
-    rate: 10  # Rate for SRMamba (downsampling rate)
-    mamba_type: SRMamba  # Options: SRMamba, Mamba, BiMamba
     optimizer:
         which: adam
         adam_config:
