@@ -1,7 +1,7 @@
 """
 AEM_MIL - Attention Entropy Maximization Multiple Instance Learning
 Reference: Attention Entropy Maximization for Multiple Instance Learning based Whole Slide Image Classification
-Paper: (需要补充论文信息)
+Paper: TODO
 
 Key idea: Maximize attention entropy to encourage diverse attention patterns
 """

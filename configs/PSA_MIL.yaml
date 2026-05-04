@@ -38,6 +38,9 @@ Model:
     min_local_k: 1
     max_local_k: 25
     init_k: 7
+    max_instances: 4096  # PSA builds an N x N distance matrix; lower to 2048/1024 if CUDA OOM occurs.
+    sampling: uniform  # uniform, random, or head
+    eval_sampling: uniform
     dropout: 0.1
     act: relu
     optimizer:

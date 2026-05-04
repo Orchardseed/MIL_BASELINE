@@ -34,6 +34,7 @@ def process_TRANS_MIL(args):
     print('DataLoader Ready!')
     
     device = torch.device(f'cuda:{args.General.device}')
+    num_classes = args.General.num_classes
     mil_model = get_model_from_yaml(args)
     mil_model.to(device)
     

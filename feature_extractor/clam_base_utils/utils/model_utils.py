@@ -59,7 +59,7 @@ def get_transforms(backbone_name:str):
         std = (0.229, 0.224, 0.225)
         uni_v2_transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean = mean, std = std)])
         return uni_v2_transform
-    elif backbone_name == 'hoptimus_v1' or backbone_name == ''hoptimus_v1':
+    elif backbone_name == 'hoptimus_v1' or backbone_name == 'hoptimus_v0':
         mean=(0.707223, 0.578729, 0.703617)
         std=(0.211883, 0.230117, 0.177517)
         hoptimus_transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean = mean, std = std)])
@@ -194,7 +194,7 @@ def get_backbone(backbone_name:str,device,pretrained_weights_dir):
         state_dict = torch.load(checkpoint_path, map_location="cpu",weights_only=True)
         model.load_state_dict(state_dict, strict=True)
         model = model.to(device)
-    elif backbone_name == 'hoptimus_v1' or backbone_name == 'hoptimus_v0'
+    elif backbone_name == 'hoptimus_v1' or backbone_name == 'hoptimus_v0':
         assert timm.__version__ == '0.9.16', f"H-Optimus requires timm version 0.9.16, but found {timm.__version__}. Please install the correct version using `pip install timm==0.9.16`"
         hoptimus_v1_config = {
             "num_classes": 0,

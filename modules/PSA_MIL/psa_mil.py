@@ -249,6 +249,11 @@ class PSA_MIL(nn.Module):
     ``WSI_feature`` is the pooled slide representation. ``WSI_attn`` is the
     attention pooling weight when ``pool_type=attention``; otherwise it is the
     final CLS-to-patch local posterior score.
+
+    PSA uses an ``N x N`` spatial distance matrix, so very large WSI bags must be
+    capped with ``max_instances``. Unsampled patches receive zero importance when
+    ``return_WSI_attn=True`` so heatmap utilities still get one score per input
+    patch.
     """
 
     def __init__(
@@ -269,6 +274,9 @@ class PSA_MIL(nn.Module):
         min_local_k=1,
         max_local_k=25,
         init_k=7,
+        max_instances=4096,
+        sampling="uniform",
+        eval_sampling="uniform",
         act=None,
     ):
         super().__init__()
@@ -276,6 +284,9 @@ class PSA_MIL(nn.Module):
         self.in_dim = in_dim
         self.pool_type = pool_type
         self.patch_drop_rate = patch_drop_rate
+        self.max_instances = max_instances
+        self.sampling = sampling
+        self.eval_sampling = eval_sampling
         hidden_dim = attn_dim * num_heads
         self.adapter = ResidualFullyConnected(in_dim, hidden_dim, num_layers_adapter)
         if pool_type == "cls_token":
@@ -327,6 +338,22 @@ class PSA_MIL(nn.Module):
         coords = self._pseudo_coords(x.shape[1], x.device, x.dtype).unsqueeze(0).expand(x.shape[0], -1, -1)
         return x[..., : self.in_dim], coords
 
+    def _sample_instances(self, x, coords):
+        n = x.shape[1]
+        if self.max_instances is None or self.max_instances <= 0 or n <= self.max_instances:
+            return x, coords, None, n
+
+        mode = self.sampling if self.training else self.eval_sampling
+        if mode == "random":
+            idx = torch.randperm(n, device=x.device)[: self.max_instances].sort().values
+        elif mode == "head":
+            idx = torch.arange(self.max_instances, device=x.device)
+        elif mode == "uniform":
+            idx = torch.linspace(0, n - 1, self.max_instances, device=x.device).long()
+        else:
+            raise ValueError("sampling/eval_sampling must be one of: uniform, random, head")
+        return x.index_select(1, idx), coords.index_select(1, idx), idx, n
+
     def _build_distance_inputs(self, coords):
         distance = torch.cdist(coords.float(), coords.float(), p=2)
         positive = distance[distance > 0]
@@ -338,6 +365,7 @@ class PSA_MIL(nn.Module):
     def forward(self, x, coords=None, return_WSI_attn=False, return_WSI_feature=False):
         forward_return = {}
         x, coords = self._split_features_coords(x, coords)
+        x, coords, sampled_idx, original_n = self._sample_instances(x, coords)
         h = self.adapter(x.float())
 
         if self.training and self.patch_drop_rate > 0 and h.shape[1] > 1:
@@ -345,6 +373,7 @@ class PSA_MIL(nn.Module):
             patch_idx = torch.randperm(h.shape[1], device=h.device)[:keep]
             h = h[:, patch_idx]
             coords = coords[:, patch_idx]
+            sampled_idx = patch_idx if sampled_idx is None else sampled_idx.index_select(0, patch_idx)
 
         if self.pool_type == "cls_token":
             cls_tokens = self.cls_token.expand(h.shape[0], -1, -1).to(h.device)
@@ -377,6 +406,9 @@ class PSA_MIL(nn.Module):
             else:
                 patch_tokens = h[:, 1:] if self.pool_type == "cls_token" else h
                 attn = torch.einsum("bnc,bc->bn", patch_tokens, slide_feature)
+            if sampled_idx is not None:
+                full_attn = torch.zeros(attn.shape[0], original_n, device=attn.device, dtype=attn.dtype)
+                full_attn.index_copy_(1, sampled_idx, attn)
+                attn = full_attn
             forward_return["WSI_attn"] = attn.squeeze(0).unsqueeze(-1)
         return forward_return
-

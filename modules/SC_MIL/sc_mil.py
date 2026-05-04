@@ -1,7 +1,7 @@
 """
 SC_MIL - Sparse Context-aware Multiple Instance Learning
 Reference: Sparse Context-aware Multiple Instance Learning for Predicting Cancer Survival Probability Distribution in Whole Slide Images
-Paper: (需要补充论文信息)
+Paper: TODO
 
 Note: This model requires coordinates (coords) as input, similar to LONG_MIL.
 The coords should be provided from h5 files.

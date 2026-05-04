@@ -316,6 +316,9 @@ def get_model_from_yaml(yaml_args):
             min_local_k=yaml_args.Model.min_local_k if hasattr(yaml_args.Model, 'min_local_k') else 1,
             max_local_k=yaml_args.Model.max_local_k if hasattr(yaml_args.Model, 'max_local_k') else 25,
             init_k=yaml_args.Model.init_k if hasattr(yaml_args.Model, 'init_k') else 7,
+            max_instances=yaml_args.Model.max_instances if hasattr(yaml_args.Model, 'max_instances') else 4096,
+            sampling=yaml_args.Model.sampling if hasattr(yaml_args.Model, 'sampling') else 'uniform',
+            eval_sampling=yaml_args.Model.eval_sampling if hasattr(yaml_args.Model, 'eval_sampling') else 'uniform',
             act=get_act(yaml_args.Model.act)
         )
         return mil_model
