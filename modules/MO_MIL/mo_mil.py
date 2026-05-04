@@ -196,9 +196,9 @@ class MO_MIL(nn.Module):
         return x.reshape(b, -1, width, c).transpose(1, 2).reshape(b, n, c)
 
     def _sample_tokens(self, x, mask):
-        if self.max_instances is None or self.max_instances <= 0 or x.shape[1] <= self.max_instances:
-            return x, mask
         n = x.shape[1]
+        if self.max_instances is None or self.max_instances <= 0 or n <= self.max_instances:
+            return x, mask, None, n
         if self.training and self.sampling == "random":
             idx = torch.randperm(n, device=x.device)[: self.max_instances].sort().values
         elif self.sampling == "head":
@@ -208,7 +208,7 @@ class MO_MIL(nn.Module):
         x = x.index_select(1, idx)
         if mask is not None:
             mask = mask.index_select(1, idx)
-        return x, mask
+        return x, mask, idx, n
 
     def _pad_square(self, h, mask):
         n = h.shape[1]
@@ -242,7 +242,7 @@ class MO_MIL(nn.Module):
 
         forward_return = {}
         h = self.project(x.float())
-        h, mask = self._sample_tokens(h, mask)
+        h, mask, sampled_idx, input_n = self._sample_tokens(h, mask)
         h, mask, original_n, width = self._pad_square(h, mask)
         padded_n = h.shape[1]
 
@@ -299,5 +299,9 @@ class MO_MIL(nn.Module):
                 )
             else:
                 attn_for_patches = attn_second
+            if sampled_idx is not None:
+                full_attn = torch.zeros(attn_for_patches.shape[0], input_n, device=attn_for_patches.device, dtype=attn_for_patches.dtype)
+                full_attn.index_copy_(1, sampled_idx, attn_for_patches)
+                attn_for_patches = full_attn
             forward_return["WSI_attn"] = attn_for_patches.squeeze(0).unsqueeze(-1)
         return forward_return

@@ -85,19 +85,23 @@ def infer_single_slide(model, model_name, features, attention_kwargs = {}, coord
     if model_name == 'DTFD_MIL':
         return dtfd_infer_single_slide(model, features,**attention_kwargs)
     features = features.to(device)
+    coords_np = None
+    if coords is not None:
+        if torch.is_tensor(coords):
+            coords_np = coords.detach().cpu().numpy()
+        else:
+            coords_np = np.asarray(coords)
     if coords is not None and model_name in SPATIAL_COORD_MODEL_NAMES:
-        if not torch.is_tensor(coords):
-            coords = torch.tensor(coords)
-        coords = coords.to(device=device, dtype=features.dtype)
-        if coords.dim() == 3:
-            coords = coords.squeeze(0)
+        coords_for_model = torch.as_tensor(coords_np, device=device, dtype=features.dtype)
+        if coords_for_model.dim() == 3:
+            coords_for_model = coords_for_model.squeeze(0)
         if features.dim() == 3:
-            coords = coords.unsqueeze(0)
-        features = torch.cat([features, coords[..., :2]], dim=-1)
+            coords_for_model = coords_for_model.unsqueeze(0)
+        features = torch.cat([features, coords_for_model[..., :2]], dim=-1)
     model.eval()
     with torch.inference_mode():
         A = model(features,return_WSI_attn=True)['WSI_attn']
-        A = A.view(-1, 1).cpu().numpy()
+        A = A.view(-1, 1).detach().cpu().numpy()
     return  A
 
 # def score2percentile(score, ref):
