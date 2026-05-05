@@ -59,6 +59,57 @@ class WSI_Dataset(Dataset):
         sampler = WeightedRandomSampler(weights=weights, num_samples=num_samples, replacement=replacement)
         return sampler
 
+
+class WSI_Coord_Dataset(WSI_Dataset):
+    """
+    WSI dataset variant for spatial MIL models.
+
+    If feature files contain coordinates, the returned tensor is
+    ``[num_patches, feature_dim + 2]`` with ``(x, y)`` appended to the last
+    dimension. Supported coordinate sources:
+    - ``.h5`` files with ``features`` and ``coords`` datasets
+    - ``.pt`` dicts with ``feats``/``features`` and ``coords`` keys
+
+    If coordinates are absent, it returns features only; spatial models then use
+    their pseudo-grid fallback for compatibility.
+    """
+
+    def __getitem__(self, idx):
+        slide_path = self.slide_path_list[idx]
+        label = int(self.labels_list[idx])
+        label = torch.tensor(label)
+        coords = None
+
+        if slide_path.endswith('.h5'):
+            with h5py.File(slide_path, 'r') as h5_file:
+                feat = h5_file['features'][:]
+                feat = torch.from_numpy(feat)
+                if 'coords' in h5_file:
+                    coords = torch.from_numpy(np.array(h5_file['coords']))
+        else:
+            loaded = torch.load(slide_path)
+            if isinstance(loaded, dict):
+                if 'feats' in loaded:
+                    feat = loaded['feats']
+                elif 'features' in loaded:
+                    feat = loaded['features']
+                else:
+                    raise ValueError(f"Unknown dict format in {slide_path}, keys: {list(loaded.keys())}")
+                if 'coords' in loaded:
+                    coords = loaded['coords']
+            else:
+                feat = loaded
+
+        if len(feat.shape) == 3:
+            feat = feat.squeeze(0)
+        if coords is not None:
+            if len(coords.shape) == 3:
+                coords = coords.squeeze(0)
+            coords = coords.to(feat.device).float()
+            if coords.shape[0] == feat.shape[0] and coords.shape[-1] >= 2:
+                feat = torch.cat([feat, coords[:, :2]], dim=-1)
+        return feat, label
+
     
 class CDP_MIL_WSI_Dataset(WSI_Dataset):
     def __init__(self,dataset_info_csv_path,BeyesGuassian_pt_dir,group):

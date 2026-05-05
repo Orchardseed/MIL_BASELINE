@@ -4,7 +4,7 @@ from modules.TRANS_MIL.trans_mil import TRANS_MIL
 from utils.process_utils import get_process_pipeline,get_act
 from utils.wsi_utils import WSI_Dataset
 from utils.general_utils import set_global_seed,init_epoch_info_log,add_epoch_info_log,early_stop
-from utils.model_utils import get_optimizer,get_scheduler,get_criterion,save_last_model,save_log,model_select
+from utils.model_utils import get_optimizer,get_scheduler,get_criterion,save_last_model,save_log,model_select,get_model_from_yaml
 from utils.loop_utils import train_loop,val_loop
 from tqdm import tqdm
     
@@ -35,10 +35,7 @@ def process_TRANS_MIL(args):
     
     device = torch.device(f'cuda:{args.General.device}')
     num_classes = args.General.num_classes
-    in_dim = args.Model.in_dim
-    dropout = args.Model.dropout
-    act = get_act(args.Model.act)
-    mil_model = TRANS_MIL(num_classes=num_classes,dropout=dropout,act=act,in_dim=in_dim)
+    mil_model = get_model_from_yaml(args)
     mil_model.to(device)
     
     print('Model Ready!')

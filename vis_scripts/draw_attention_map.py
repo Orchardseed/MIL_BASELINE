@@ -243,7 +243,10 @@ def main(args):
         wsi_df.loc[i, 'bag_size'] = len(features)
         
         wsi_object.saveSegmentation(mask_file)
-        A = infer_single_slide(mil_model, mil_model_name, features,attention_kwargs)
+        file = h5py.File(h5_path, "r")
+        coords = file['coords'][:] if 'coords' in file else None
+        file.close()
+        A = infer_single_slide(mil_model, mil_model_name, features,attention_kwargs, coords=coords)
         del features
         
         if not os.path.isfile(block_map_save_path): 

@@ -3,7 +3,7 @@ from utils.yaml_utils import read_yaml
 from torch.utils.data import DataLoader
 from utils.loop_utils import val_loop,clam_val_loop,ds_val_loop,dtfd_val_loop
 import warnings
-from utils.wsi_utils import WSI_Dataset,CDP_MIL_WSI_Dataset,LONG_MIL_WSI_Dataset
+from utils.wsi_utils import WSI_Dataset,CDP_MIL_WSI_Dataset,LONG_MIL_WSI_Dataset,WSI_Coord_Dataset
 import torch
 import shutil
 import os
@@ -22,8 +22,11 @@ def test(args):
     if model_name == 'CDP_MIL':
         test_ds = CDP_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.BeyesGuassian_pt_dir,'test')
     elif model_name == 'LONG_MIL':
-        LONG_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.h5_csv_path,'test')
-    test_ds = WSI_Dataset(test_dataset_csv,'test')
+        test_ds = LONG_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.h5_csv_path,'test')
+    elif model_name in ['PSA_MIL', 'STABLE_MIL']:
+        test_ds = WSI_Coord_Dataset(test_dataset_csv,'test')
+    else:
+        test_ds = WSI_Dataset(test_dataset_csv,'test')
     test_dataloader = DataLoader(test_ds,batch_size=1,shuffle=False)
     model_weight_path = args.model_weight_path
     print(f"Model weight path: {model_weight_path}")

@@ -1,5 +1,5 @@
 General:
-    MODEL_NAME: TRANS_MIL
+    MODEL_NAME: MO_MIL
     seed: 2024
     num_classes: 2
     num_epochs: 5
@@ -25,11 +25,21 @@ Logs:
 Model:
     in_dim: 512  # Check the real CONCH feature dim on the server; override with --options Model.in_dim=...
     hidden_dim: 512
-    num_heads: 8
-    num_landmarks: null  # null keeps original TransMIL default: hidden_dim // 2
-    pinv_iterations: 6
-    dropout: 0.1
-    act: relu
+    dropout: 0.25
+    act: gelu
+    first_order_attn_hidden: 128
+    second_order_type: multi_order_sequence  # multi_order_sequence follows released MoMIL; self_attn is a PyTorch ablation
+    second_order_layers: 2
+    layer: 2
+    num_heads: 4
+    fusion_type: concat  # concat matches multi-order enhancement; gated is available as an ablation
+    use_coords: False
+    sequence_layer: torch  # torch is dependency-free; set mamba2 only if Mamba2 is installed
+    d_state: 64
+    d_conv: 4
+    expand: 2
+    max_instances: 4096  # 0/null disables token sampling
+    sampling: uniform  # uniform, random, or head
     optimizer:
         which: adam
         adam_config:
@@ -53,3 +63,4 @@ Model:
         cosine_config:
             T_max: 10
             eta_min: 0.0001
+

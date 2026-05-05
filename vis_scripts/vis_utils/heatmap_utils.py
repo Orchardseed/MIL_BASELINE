@@ -27,6 +27,7 @@ from tqdm import tqdm
 from utils.loop_utils import get_cam_1d
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+SPATIAL_COORD_MODEL_NAMES = {'PSA_MIL', 'STABLE_MIL'}
 def dtfd_infer_single_slide(model_list,features, **kwargs):
     total_instance = kwargs['total_instance']
     num_Group = kwargs['num_Group']
@@ -80,14 +81,27 @@ def dtfd_infer_single_slide(model_list,features, **kwargs):
     A = A.view(-1, 1).detach().cpu().numpy()
     return A
 
-def infer_single_slide(model, model_name, features, attention_kwargs = {}):
+def infer_single_slide(model, model_name, features, attention_kwargs = {}, coords=None):
     if model_name == 'DTFD_MIL':
         return dtfd_infer_single_slide(model, features,**attention_kwargs)
     features = features.to(device)
+    coords_np = None
+    if coords is not None:
+        if torch.is_tensor(coords):
+            coords_np = coords.detach().cpu().numpy()
+        else:
+            coords_np = np.asarray(coords)
+    if coords is not None and model_name in SPATIAL_COORD_MODEL_NAMES:
+        coords_for_model = torch.as_tensor(coords_np, device=device, dtype=features.dtype)
+        if coords_for_model.dim() == 3:
+            coords_for_model = coords_for_model.squeeze(0)
+        if features.dim() == 3:
+            coords_for_model = coords_for_model.unsqueeze(0)
+        features = torch.cat([features, coords_for_model[..., :2]], dim=-1)
     model.eval()
     with torch.inference_mode():
         A = model(features,return_WSI_attn=True)['WSI_attn']
-        A = A.view(-1, 1).cpu().numpy()
+        A = A.view(-1, 1).detach().cpu().numpy()
     return  A
 
 # def score2percentile(score, ref):
@@ -95,8 +109,9 @@ def infer_single_slide(model, model_name, features, attention_kwargs = {}):
 #     return percentile
 
 def score2percentile(score, ref):
-    percentile = percentileofscore(ref.squeeze(), score.squeeze())
-    return percentile
+    ref = np.asarray(ref).reshape(-1)
+    score = float(np.asarray(score).reshape(-1)[0])
+    return percentileofscore(ref, score)
 
 def drawHeatmap(scores, coords, slide_path=None, wsi_object=None, vis_level = -1, **kwargs):
     if wsi_object is None:
@@ -144,7 +159,7 @@ def compute_from_patches(wsi_object, feature_extractor_name=None, feature_extrac
             if attn_save_path is not None:
                 # A = mil_model(features, return_WSI_attn=True)
                 # A = A.view(-1, 1).cpu().numpy()
-                A = infer_single_slide(mil_model, mil_model_name, features, attention_kwargs)
+                A = infer_single_slide(mil_model, mil_model_name, features, attention_kwargs, coords=coords)
 
                 if ref_scores is not None:
                     for score_idx in range(len(A)):
