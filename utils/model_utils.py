@@ -255,8 +255,8 @@ def get_model_from_yaml(yaml_args):
             sampling=sampling,
         )
         return mil_model
-    elif model_name == 'FOURIERMIL':
-        from modules.FOURIERMIL.fouriermil import FOURIERMIL
+    elif model_name == 'FOURIER_MIL':
+        from modules.FOURIER_MIL.fourier_mil import FOURIER_MIL
         hidden_dim = yaml_args.Model.hidden_dim if hasattr(yaml_args.Model, 'hidden_dim') else 512
         num_layers = yaml_args.Model.num_layers if hasattr(yaml_args.Model, 'num_layers') else 2
         num_blocks = yaml_args.Model.num_blocks if hasattr(yaml_args.Model, 'num_blocks') else 8
@@ -265,7 +265,7 @@ def get_model_from_yaml(yaml_args):
         hard_thresholding_fraction = yaml_args.Model.hard_thresholding_fraction if hasattr(yaml_args.Model, 'hard_thresholding_fraction') else 1.0
         hidden_size_factor = yaml_args.Model.hidden_size_factor if hasattr(yaml_args.Model, 'hidden_size_factor') else 1
         mlp_ratio = yaml_args.Model.mlp_ratio if hasattr(yaml_args.Model, 'mlp_ratio') else 1.0
-        mil_model = FOURIERMIL(
+        mil_model = FOURIER_MIL(
             num_classes=yaml_args.General.num_classes,
             in_dim=yaml_args.Model.in_dim,
             hidden_dim=hidden_dim,

@@ -1,5 +1,5 @@
 General:
-    MODEL_NAME: FOURIERMIL
+    MODEL_NAME: FOURIER_MIL
     seed: 2024
     num_classes: 2
     num_epochs: 5
@@ -27,7 +27,7 @@ Model:
     hidden_dim: 512
     num_layers: 2
     num_blocks: 8
-    mode: AP  # AP, LP, or HP from FourierMIL APFF filtering
+    mode: AP  # AP, LP, or HP from FOURIER_MIL APFF filtering
     sparsity_threshold: 0.01
     hard_thresholding_fraction: 1.0
     hidden_size_factor: 1

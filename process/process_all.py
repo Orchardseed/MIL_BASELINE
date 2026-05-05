@@ -22,9 +22,9 @@ def process(args,yaml_path,options):
     elif args.General.MODEL_NAME == 'WIKG_MIL':
         from .WIKG_MIL.process_wikg_mil import process_WIKG_MIL
         process_WIKG_MIL(args)
-    elif args.General.MODEL_NAME == 'FOURIERMIL':
-        from .FOURIERMIL.process_fouriermil import process_FOURIERMIL
-        process_FOURIERMIL(args)
+    elif args.General.MODEL_NAME == 'FOURIER_MIL':
+        from .FOURIER_MIL.process_fourier_mil import process_FOURIER_MIL
+        process_FOURIER_MIL(args)
     elif args.General.MODEL_NAME == 'TRANS_MIL':
         from .TRANS_MIL.process_trans_mil import process_TRANS_MIL
         process_TRANS_MIL(args)

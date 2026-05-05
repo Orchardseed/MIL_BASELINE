@@ -105,7 +105,7 @@ This project was originally developed for our previous work and is continuously 
 * MIXUP_MIL [mixup: Beyond Empirical Risk Minimization](https://arxiv.org/abs/1710.09412) (ICLR 2018)
 * DT_MIL [Deformable Transformer for Multi-instance Learning on Histopathological Image](https://link.springer.com/chapter/10.1007/978-3-030-87237-3_20) (MICCAI 2021)
 * TRANS_MIL [Transformer based Correlated Multiple Instance Learning for WSI Classification](https://arxiv.org/abs/2106.00908) (NeurIPS 2021)
-* FOURIERMIL [Fourier filtering-based multiple instance learning for whole slide image analysis](https://doi.org/10.1007/s11263-025-02679-x) (IJCV 2025)
+* FOURIER_MIL [Fourier filtering-based multiple instance learning for whole slide image analysis](https://doi.org/10.1007/s11263-025-02679-x) (IJCV 2025)
 * DS_MIL [Dual-stream MIL Network for WSI Classification with Self-supervised Contrastive Learning](https://arxiv.org/abs/2011.08939) (CVPR 2021)
 * CLAM_MIL [Data Efficient and Weakly Supervised Computational Pathology on WSI](https://arxiv.org/abs/2004.09666) (NAT BIOMED ENG 2021)
 * PGCN_MIL [Context-Aware Survival Prediction using Patch-based Graph Convolutional Networks](https://github.com/mahmoodlab/Patch-GCN) (MICCAI 2021)

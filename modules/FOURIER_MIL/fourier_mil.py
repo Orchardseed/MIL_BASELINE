@@ -147,18 +147,18 @@ class FourierBlock(nn.Module):
         return x
 
 
-class FOURIERMIL(nn.Module):
-    """FourierMIL: Fourier filtering-based MIL for WSI classification.
+class FOURIER_MIL(nn.Module):
+    """FOURIER_MIL: Fourier filtering-based MIL for WSI classification.
 
     This is a MIL_BASELINE-compatible adaptation of the ``ijcv2025-main``
-    FourierMIL implementation. It keeps the original method principle:
+    FOURIER_MIL implementation. It keeps the original method principle:
     projected patch tokens are padded to a square length, a CLS token is prepended,
     and adaptive Fourier filtering (APFF) blocks model token interactions in the
     frequency domain before slide-level classification.
 
     Input: ``[B, N, in_dim]`` patch features.
     Output: ``{"logits": logits}`` with logits shaped ``[B, num_classes]``.
-    ``WSI_feature`` is the FourierMIL CLS token. FourierMIL does not define an
+    ``WSI_feature`` is the FOURIER_MIL CLS token. FOURIER_MIL does not define an
     explicit patch attention distribution, so ``WSI_attn`` is the patch-to-CLS
     dot-product similarity used as an instance importance score for heatmaps.
     """
@@ -238,4 +238,3 @@ class FOURIERMIL(nn.Module):
             attn = torch.einsum("bnc,bc->bn", patch_tokens, cls_token)
             forward_return["WSI_attn"] = attn.squeeze(0).unsqueeze(-1)
         return forward_return
-

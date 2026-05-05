@@ -9,7 +9,7 @@ from utils.process_utils import get_process_pipeline
 from utils.wsi_utils import WSI_Dataset
 
 
-def process_FOURIERMIL(args):
+def process_FOURIER_MIL(args):
     train_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'train')
     val_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'val')
     test_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'test')
@@ -70,4 +70,3 @@ def process_FOURIERMIL(args):
         if epoch + 1 == args.General.num_epochs:
             save_last_model(args, mil_model.state_dict(), epoch + 1)
             save_log(args, epoch_info_log, best_epoch, process_pipeline)
-
