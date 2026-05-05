@@ -82,6 +82,7 @@ This project was originally developed for our previous work and is continuously 
 * The difference between the different splits is in   `/split_scripts/README.md`
 
 ### :triangular_ruler: Feature Encoder
+<em>Deprecated, we recommend using [https://github.com/mahmoodlab/Trident](https://github.com/mahmoodlab/Trident) instead, as it provides comprehensive PFM integration.</em>
 * R50 [Deep Residual Learning for Image Recognition](https://openaccess.thecvf.com/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html) (CVPR 2016)
 * VIT-S [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/pdf/2010.11929) (ICLR 2021)
 * CTRANSPATH [Transformer-Based SSL for Histopathological Image Classification](https://link.springer.com/chapter/10.1007/978-3-030-87237-3_18) (MIA 2023)
