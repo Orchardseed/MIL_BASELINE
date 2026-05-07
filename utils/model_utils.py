@@ -645,6 +645,21 @@ def get_model_from_yaml(yaml_args):
             act=act
         )
         return mil_model
+    elif model_name == 'DAG_MIL':
+        from modules.DAG_MIL.dag_mil import DAG_MIL
+        mil_model = DAG_MIL(
+            in_dim=yaml_args.Model.in_dim,
+            num_classes=yaml_args.General.num_classes,
+            dim_hidden=yaml_args.Model.dim_hidden if hasattr(yaml_args.Model, 'dim_hidden') else 512,
+            topk=yaml_args.Model.topk if hasattr(yaml_args.Model, 'topk') else 6,
+            stride=yaml_args.Model.stride if hasattr(yaml_args.Model, 'stride') else 512,
+            agg_type=yaml_args.Model.agg_type if hasattr(yaml_args.Model, 'agg_type') else 'bi-interaction',
+            dropout=yaml_args.Model.dropout if hasattr(yaml_args.Model, 'dropout') else 0.3,
+            max_instances=yaml_args.Model.max_instances if hasattr(yaml_args.Model, 'max_instances') else None,
+            sampling=yaml_args.Model.sampling if hasattr(yaml_args.Model, 'sampling') else 'uniform',
+            eval_sampling=yaml_args.Model.eval_sampling if hasattr(yaml_args.Model, 'eval_sampling') else 'uniform'
+        )
+        return mil_model
     elif model_name == 'SC_MIL':
         from modules.SC_MIL.sc_mil import SC_MIL
         hidden_size = yaml_args.Model.hidden_size if hasattr(yaml_args.Model, 'hidden_size') else yaml_args.Model.in_dim
