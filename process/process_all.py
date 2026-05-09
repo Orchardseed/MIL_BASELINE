@@ -120,6 +120,9 @@ def process(args,yaml_path,options):
     elif args.General.MODEL_NAME == 'GDF_MIL':
         from .GDF_MIL.process_gdf_mil import process_GDF_MIL
         process_GDF_MIL(args)
+    elif args.General.MODEL_NAME == 'DAG_MIL':
+        from .DAG_MIL.process_dag_mil import process_DAG_MIL
+        process_DAG_MIL(args)
     elif args.General.MODEL_NAME == 'PSEBMIX_MIL':
         from .PSEBMIX_MIL.process_psebmix_mil import process_PSEBMIX_MIL
         process_PSEBMIX_MIL(args)
