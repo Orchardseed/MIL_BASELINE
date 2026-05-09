@@ -145,7 +145,7 @@ This project was originally developed for our previous work and is continuously 
 * PSA_MIL [Probabilistic Spatial Attention-Based MIL for Whole Slide Image Classification](https://arxiv.org/abs/2503.16284) (WACV 2026)
 * STABLE_MIL [Entropy-Stabilized Attention-based MIL for Morphologically Variable WSIs](https://ieeexplore.ieee.org/abstract/document/11477827)(TMI 2026) 
 * GDF_MIL [Rethinking Multi-Instance Learning through Graph-Driven Fusion](https://ojs.aaai.org/index.php/AAAI/article/view/40081) (AAAI 2026)
-* DAG_MIL [Deformable attention graph representation learning for histopathology whole slide image analysis](https://ieeexplore.ieee.org/abstract/document/11464653) (ICASSP 2026)
+* DAG_MIL [Deformable attention graph representation learning for histopathology WSI analysis](https://ieeexplore.ieee.org/abstract/document/11464653) (ICASSP 2026)
 * MO_MIL [MoMIL: Multi-order Enhanced Multiple Instance Learning for Computational Pathology](https://www.sciencedirect.com/science/article/abs/pii/S0262885626000247) (IJCV  2026)
 * UPDATING...
 
