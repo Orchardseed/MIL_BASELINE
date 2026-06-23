@@ -99,7 +99,7 @@ def initialize_hdf5_bag(first_patch, save_coord=False):
     file.close()
     return file_path
 
-def sample_indices(scores, k, start=0.48, end=0.52, convert_to_percentile=False, seed=1):
+def sample_indices(scores, k, start=0.48, end=0.52, convert_to_percentile=False, seed=42):
     np.random.seed(seed)
     if convert_to_percentile:
         end_value = np.quantile(scores, end)
@@ -134,7 +134,7 @@ def screen_coords(scores, coords, top_left, bot_right):
     coords = coords[mask]
     return scores, coords
 
-def sample_rois(scores, coords, k=5, mode='range_sample', seed=1, score_start=0.45, score_end=0.55, top_left=None, bot_right=None):
+def sample_rois(scores, coords, k=5, mode='range_sample', seed=42, score_start=0.45, score_end=0.55, top_left=None, bot_right=None):
 
     if len(scores.shape) == 2:
         scores = scores.flatten()
@@ -281,7 +281,7 @@ def StitchCoords(hdf5_file_path, wsi_object, downscale=16, draw_grid=False, bg_c
     return heatmap
 
 def SamplePatches(coords_file_path, save_file_path, wsi_object, 
-    patch_level=0, custom_downsample=1, patch_size=256, sample_num=100, seed=1, stitch=True, verbose=1, mode='w'):
+    patch_level=0, custom_downsample=1, patch_size=256, sample_num=100, seed=42, stitch=True, verbose=1, mode='w'):
     file = h5py.File(coords_file_path, 'r')
     dset = file['coords']
     coords = dset[:]

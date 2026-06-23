@@ -33,7 +33,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 	def __init__(self,
 		csv_path = 'dataset_csv/ccrcc_clean.csv',
 		shuffle = False, 
-		seed = 7, 
+		seed = 42,
 		print_info = True,
 		label_dict = {},
 		filter_dict = {},

@@ -102,7 +102,7 @@ def print_network(net):
 
 
 def generate_split(cls_ids, val_num, test_num, samples, n_splits = 5,
-	seed = 7, label_frac = 1.0, custom_test_ids = None):
+	seed = 42, label_frac = 1.0, custom_test_ids = None):
 	indices = np.arange(samples).astype(int)
 	
 	if custom_test_ids is not None:

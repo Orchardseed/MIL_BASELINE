@@ -179,7 +179,7 @@ python train_mil.py --yaml_path /configs/AB_MIL.yaml
 ```
 We also support dynamic parameter passing, and you can pass any parameters that exist in the `/configs/AB_MIL.yaml` file, for example:
 ``` shell
-python train_mil.py --yaml_path /configs/AB_MIL.yaml --options General.seed=2024 General.num_epochs=20 Model.in_dim=768
+python train_mil.py --yaml_path /configs/AB_MIL.yaml --options General.seed=42 General.num_epochs=20 Model.in_dim=768
 ```
 The `/test_mil.py` will help you test pretrained MIL models like this:
 ``` shell

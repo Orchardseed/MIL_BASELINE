@@ -15,7 +15,7 @@ def get_bayesian_gaussian_pt(pt_file_path,save_path):
     bag_feat = torch.load(pt_file_path,weights_only = True).unsqueeze(0).cpu().numpy()
     if len(bag_feat.shape) == 3:
         bag_feat = bag_feat.squeeze(0)
-    dp_cluster = BayesianGaussianMixture(n_components=10, random_state=0, max_iter=30, weight_concentration_prior=0.1)
+    dp_cluster = BayesianGaussianMixture(n_components=10, random_state=42, max_iter=30, weight_concentration_prior=0.1)
     dp_cluster.fit(bag_feat)
     assignments = dp_cluster.predict(bag_feat)
     print(assignments.shape)

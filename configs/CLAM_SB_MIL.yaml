@@ -1,6 +1,6 @@
 General:
     MODEL_NAME: CLAM_SB_MIL
-    seed: 2024
+    seed: 42
     num_classes: 2
     num_epochs: 4
     device: 1

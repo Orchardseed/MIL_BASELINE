@@ -156,7 +156,7 @@ class ClusterLocalAttention(nn.Module):
             
             if CUML_AVAILABLE:
                 # Use GPU-accelerated cuml KMeans
-                kmeans = cuKMeans(n_clusters=n_cluster, init='k-means++', tol=1e-4, max_iter=5, random_state=1)
+                kmeans = cuKMeans(n_clusters=n_cluster, init='k-means++', tol=1e-4, max_iter=5, random_state=42)
                 labels = kmeans.fit_predict(clustering_input)
                 # cuml returns cuDF Series, need to convert to numpy
                 labels = labels.get() if hasattr(labels, 'get') else labels
@@ -165,12 +165,12 @@ class ClusterLocalAttention(nn.Module):
                 labels = np.asarray(labels)
             elif SKLEARN_AVAILABLE:
                 # Use CPU-based sklearn KMeans (slower but functional)
-                kmeans = KMeans(n_clusters=n_cluster, init='k-means++', tol=1e-4, max_iter=5, random_state=1, n_init=10)
+                kmeans = KMeans(n_clusters=n_cluster, init='k-means++', tol=1e-4, max_iter=5, random_state=42, n_init=10)
                 labels = kmeans.fit_predict(clustering_input)
                 labels = np.asarray(labels)
             else:
                 # Fallback: random assignment (should not happen if sklearn is installed)
-                np.random.seed(1)
+                np.random.seed(42)
                 labels = np.random.randint(0, n_cluster, size=L)
         
         # Sort by cluster labels
