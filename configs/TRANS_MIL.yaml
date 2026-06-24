@@ -12,15 +12,15 @@ General:
         metric: macro_auc
 
 Dataset:
-    DATASET_NAME: CAMELYON_CONCH
-    dataset_csv_path: /data_sde/zbr/MIL_BASELINE/datasets/CAMELYON_CONCH_split.csv
+    DATASET_NAME: your_dataset_name
+    dataset_csv_path: /path/to/your/dataset.csv
     dataset_root_dir: {}
     balanced_sampler:
         use: False
         replacement: True
 
 Logs:
-    log_root_dir: /data_sde/zbr/MIL_BASELINE/logs
+    log_root_dir: /path/to/your/log_dir/
 
 Model:
     in_dim: 512  # Check the real CONCH feature dim on the server; override with --options Model.in_dim=...

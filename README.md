@@ -143,7 +143,7 @@ fix bug of all MIL-models expect DTFD-MIL
 
 ## :orange_book: Let's Begin Now
 ### 🔨 **Code Framework**
-`MIL_BASELINE` is constructed by the following parts：
+`MIL_BASELINE` is constructed by the following parts:
 - `/configs:` MIL_BASELINE defines MIL models through a YAML configuration file.
 - `/modules:` Defined the network architectures of different MIL models.
 - `/process:` Defined the training frameworks for different MIL models.

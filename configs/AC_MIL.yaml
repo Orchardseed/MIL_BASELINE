@@ -27,7 +27,7 @@ Logs:
 
 
 Model:
-    in_dim: 1024  # depend on the pt dimensions，such resnet50——>1024 vit_s——>384
+    in_dim: 1024  # depend on the pt dimensions, such resnet50 -> 1024 vit_s -> 384
     hidden_dim: 512
     n_masked_patch: 10
     n_token: 5

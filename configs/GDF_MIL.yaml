@@ -27,7 +27,7 @@ Logs:
 
 
 Model:
-    in_dim: 1024  # depend on the pt dimensions，such resnet50——>1024 vit_s——>384
+    in_dim: 1024  # depend on the pt dimensions, such resnet50 -> 1024 vit_s -> 384
     hid_dim: 256  # hidden dimension after encoder
     out_dim: 128  # output dimension for graph and attention features
     k_components: 10  # number of components for bag partition

@@ -26,7 +26,7 @@ Logs:
     log_root_dir: /path/to/your/log_dir/
 
 Model:
-    in_dim: 1024  # depend on the pt dimensions，such resnet50——>1024 vit_s——>768
+    in_dim: 1024  # depend on the pt dimensions, such resnet50 -> 1024 vit_s -> 768
     dropout: 0.25
     embed_dim: 512
     agent_num: 256

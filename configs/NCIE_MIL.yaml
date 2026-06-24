@@ -27,7 +27,7 @@ Logs:
 
 
 Model:
-    in_dim: 1024  # depend on the pt dimensions，such resnet50——>1024 vit_s——>384
+    in_dim: 1024  # depend on the pt dimensions, such resnet50 -> 1024 vit_s -> 384
     in_chans: 256  # number of patches/channels, should be a perfect square (e.g., 16x16=256)
     latent_dim: 1024  # latent dimension after embedding
     num_heads: 4  # number of attention heads

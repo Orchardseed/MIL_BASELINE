@@ -32,7 +32,7 @@ Logs:
 
 Model:
     version: v1 # v1/v2 , v1(arxiv) v2(nips 2024)
-    in_dim: 1024  # depend on the pt dimensions，such resnet50——>1024 vit_s——>384
+    in_dim: 1024  # depend on the pt dimensions, such resnet50 -> 1024 vit_s -> 384
     hidden_dim: 512
     alibi_position_embedding_path: /path/to/your/alibi_position_embedding.pt # special need in LONG_MIL, you can generate it by /modules/LONG_MIL/get_alibi_position_embeddings.py
     optimizer:

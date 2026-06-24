@@ -1,43 +1,127 @@
 import torch
 import time
 import torch.nn.functional as F
+import numpy as np
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score,roc_curve,precision_recall_fscore_support,balanced_accuracy_score
 from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, cohen_kappa_score, confusion_matrix
 import time
 import torch.nn as nn
 
+
+def _average_loss(total_loss, processed_batches, loop_name):
+    if processed_batches == 0:
+        raise RuntimeError(f"{loop_name} loop received no valid batches")
+    return total_loss / processed_batches
+
+
+def _safe_roc_auc_score(*args, **kwargs):
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UndefinedMetricWarning)
+            return float(roc_auc_score(*args, **kwargs))
+    except ValueError:
+        return float("nan")
+
+
+def _per_class_auc(labels, probs, class_idx):
+    binary_labels = (labels == class_idx).astype(int)
+    if len(np.unique(binary_labels)) < 2:
+        return float("nan")
+    return _safe_roc_auc_score(binary_labels, probs[:, class_idx])
+
+
 def cal_scores(probs, labels, num_classes):       # probs:[batch_size, num_classes]   labels:[batch_size, ]
-    probs = torch.tensor(probs)
-    labels = torch.tensor(labels)
-    predicted_classes = torch.argmax(probs, dim=1)
-    accuracy = accuracy_score(labels.numpy(), predicted_classes.numpy())
+    probs_np = np.asarray(probs, dtype=float)
+    labels_np = np.asarray(labels).reshape(-1)
+    class_labels = list(range(num_classes))
+    predicted_classes = np.argmax(probs_np, axis=1)
+
+    accuracy = accuracy_score(labels_np, predicted_classes)
     if num_classes > 2:
-        macro_auc = roc_auc_score(y_true=labels.numpy(), y_score=probs.numpy(), average='macro', multi_class='ovr')
-        micro_auc = roc_auc_score(y_true=labels.numpy(), y_score=probs.numpy(), average='micro', multi_class='ovr')
-        weighted_auc = roc_auc_score(y_true=labels.numpy(), y_score=probs.numpy(), average='weighted', multi_class='ovr')
+        macro_auc = _safe_roc_auc_score(
+            y_true=labels_np,
+            y_score=probs_np,
+            labels=class_labels,
+            average="macro",
+            multi_class="ovr",
+        )
+        micro_auc = _safe_roc_auc_score(
+            y_true=labels_np,
+            y_score=probs_np,
+            labels=class_labels,
+            average="micro",
+            multi_class="ovr",
+        )
+        weighted_auc = _safe_roc_auc_score(
+            y_true=labels_np,
+            y_score=probs_np,
+            labels=class_labels,
+            average="weighted",
+            multi_class="ovr",
+        )
     else:
-        macro_auc = roc_auc_score(y_true=labels.numpy(), y_score=probs[:,1].numpy())
+        positive_scores = probs_np[:, 1]
+        macro_auc = _safe_roc_auc_score(y_true=labels_np, y_score=positive_scores)
         weighted_auc = micro_auc = macro_auc
-    weighted_f1 = f1_score(labels.numpy(), predicted_classes.numpy(), average='weighted')
-    weighted_recall = recall_score(labels.numpy(), predicted_classes.numpy(), average='weighted')
-    weighted_precision = precision_score(labels.numpy(), predicted_classes.numpy(), average='weighted')
-    macro_f1 = f1_score(labels.numpy(), predicted_classes.numpy(), average='macro')
-    macro_recall = recall_score(labels.numpy(), predicted_classes.numpy(), average='macro')
-    macro_precision = precision_score(labels.numpy(), predicted_classes.numpy(), average='macro')
-    micro_f1 = f1_score(labels.numpy(), predicted_classes.numpy(), average='micro')
-    micro_recall = recall_score(labels.numpy(), predicted_classes.numpy(), average='micro')
-    micro_precision = precision_score(labels.numpy(), predicted_classes.numpy(), average='micro') 
-    baccuracy = balanced_accuracy_score(labels.numpy(), predicted_classes.numpy())
-    quadratic_kappa = cohen_kappa_score(labels.numpy(), predicted_classes.numpy(), weights='quadratic')
-    linear_kappa = cohen_kappa_score(labels.numpy(), predicted_classes.numpy(), weights='linear')
-    confusion_mat = confusion_matrix(labels.numpy(), predicted_classes.numpy())
-    metrics = {'acc': accuracy,  'bacc': baccuracy, 
-               'macro_auc': macro_auc, 'micro_auc': micro_auc, 'weighted_auc':weighted_auc,
-                'macro_f1': macro_f1, 'micro_f1': micro_f1, 'weighted_f1': weighted_f1, 
-                 'macro_recall': macro_recall, 'micro_recall': micro_recall,'weighted_recall': weighted_recall, 
-                 'macro_pre': macro_precision, 'micro_pre': micro_precision,'weighted_pre': weighted_precision,
-                 'quadratic_kappa': quadratic_kappa,'linear_kappa':linear_kappa,  
-                 'confusion_mat': confusion_mat}
+
+    weighted_f1 = f1_score(labels_np, predicted_classes, average="weighted", zero_division=0)
+    weighted_recall = recall_score(labels_np, predicted_classes, average="weighted", zero_division=0)
+    weighted_precision = precision_score(labels_np, predicted_classes, average="weighted", zero_division=0)
+    macro_f1 = f1_score(labels_np, predicted_classes, average="macro", zero_division=0)
+    macro_recall = recall_score(labels_np, predicted_classes, average="macro", zero_division=0)
+    macro_precision = precision_score(labels_np, predicted_classes, average="macro", zero_division=0)
+    micro_f1 = f1_score(labels_np, predicted_classes, average="micro", zero_division=0)
+    micro_recall = recall_score(labels_np, predicted_classes, average="micro", zero_division=0)
+    micro_precision = precision_score(labels_np, predicted_classes, average="micro", zero_division=0)
+    baccuracy = balanced_accuracy_score(labels_np, predicted_classes)
+    quadratic_kappa = cohen_kappa_score(labels_np, predicted_classes, weights="quadratic")
+    linear_kappa = cohen_kappa_score(labels_np, predicted_classes, weights="linear")
+    confusion_mat = confusion_matrix(labels_np, predicted_classes, labels=class_labels)
+
+    per_precision, per_recall, per_f1, per_support = precision_recall_fscore_support(
+        labels_np,
+        predicted_classes,
+        labels=class_labels,
+        zero_division=0,
+    )
+    per_class = {}
+    for class_idx in class_labels:
+        per_class[class_idx] = {
+            "precision": float(per_precision[class_idx]),
+            "recall": float(per_recall[class_idx]),
+            "f1": float(per_f1[class_idx]),
+            "support": int(per_support[class_idx]),
+            "auc": _per_class_auc(labels_np, probs_np, class_idx),
+        }
+
+    metrics = {
+        "acc": accuracy,
+        "bacc": baccuracy,
+        "macro_auc": macro_auc,
+        "micro_auc": micro_auc,
+        "weighted_auc": weighted_auc,
+        "macro_f1": macro_f1,
+        "micro_f1": micro_f1,
+        "weighted_f1": weighted_f1,
+        "macro_recall": macro_recall,
+        "micro_recall": micro_recall,
+        "weighted_recall": weighted_recall,
+        "macro_pre": macro_precision,
+        "micro_pre": micro_precision,
+        "weighted_pre": weighted_precision,
+        "quadratic_kappa": quadratic_kappa,
+        "linear_kappa": linear_kappa,
+        "confusion_mat": confusion_mat,
+        "per_class": per_class,
+    }
+    return metrics
+
+
+def _attach_raw_predictions(metrics, probs, labels):
+    metrics["_raw_probs"] = np.asarray(probs, dtype=float).tolist()
+    metrics["_raw_labels"] = [int(label) for label in np.asarray(labels).reshape(-1)]
     return metrics
 
 def train_loop(device,model,loader,criterion,optimizer,scheduler):
@@ -45,7 +129,11 @@ def train_loop(device,model,loader,criterion,optimizer,scheduler):
     start = time.time()
     model.train()
     train_loss_log = 0
+    processed_batches = 0
     for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
         optimizer.zero_grad()
         label = data[1].long().to(device)
         bag = data[0].to(device).float()
@@ -56,7 +144,7 @@ def train_loop(device,model,loader,criterion,optimizer,scheduler):
         optimizer.step()
     if scheduler is not None:
         scheduler.step()
-    train_loss_log /= len(loader)
+    train_loss_log = _average_loss(train_loss_log, processed_batches, "train")
     end = time.time()
     total_time = end - start
     return train_loss_log,total_time
@@ -70,8 +158,12 @@ def val_loop(device,num_classes,model,loader,criterion,retrun_WSI_feature = Fals
     model = model.to(device)
     WSI_features = []
     WSI_attns = []
+    processed_batches = 0
     with torch.no_grad():
         for i, data in enumerate(loader):
+            if data is None:
+                continue
+            processed_batches += 1
             label = data[1].to(device).long()
             labels.append(label.cpu().numpy())
             bag = data[0].to(device).float()
@@ -102,15 +194,23 @@ def val_loop(device,num_classes,model,loader,criterion,retrun_WSI_feature = Fals
         return WSI_features
     if return_WSI_attn:
         return WSI_attns
-    val_metrics= cal_scores(bag_predictions_after_normal,labels,num_classes)
-    val_loss_log /= len(loader)
+    val_metrics = _attach_raw_predictions(
+        cal_scores(bag_predictions_after_normal, labels, num_classes),
+        bag_predictions_after_normal,
+        labels,
+    )
+    val_loss_log = _average_loss(val_loss_log, processed_batches, "val")
     return val_loss_log,val_metrics
 
 def ac_train_loop(device,model,loader,criterion,optimizer,scheduler,n_token):
     start = time.time()
     model.train()
     train_loss_log = 0
+    processed_batches = 0
     for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
         optimizer.zero_grad()
         label = data[1].long().to(device)
         bag = data[0].to(device).float()
@@ -121,7 +221,7 @@ def ac_train_loop(device,model,loader,criterion,optimizer,scheduler,n_token):
         if n_token > 1:
             loss0 = criterion(sub_preds, label.repeat_interleave(n_token))
         else:
-            loss0 = torch.tensor(0.)
+            loss0 = torch.tensor(0., device=device)
         diff_loss = torch.tensor(0).to(device, dtype=torch.float)
         attns = torch.softmax(attns, dim=-1)
 
@@ -136,7 +236,7 @@ def ac_train_loop(device,model,loader,criterion,optimizer,scheduler,n_token):
         optimizer.step()
     if scheduler is not None:
         scheduler.step()
-    train_loss_log /= len(loader)
+    train_loss_log = _average_loss(train_loss_log, processed_batches, "ac train")
     end = time.time()
     total_time = end - start
     return train_loss_log,total_time
@@ -150,8 +250,12 @@ def ac_val_loop(device,num_classes,model,loader,criterion,n_token,retrun_WSI_fea
     model = model.to(device)
     WSI_features = []
     WSI_attns = []
+    processed_batches = 0
     with torch.no_grad():
         for i, data in enumerate(loader):
+            if data is None:
+                continue
+            processed_batches += 1
             label = data[1].long().to(device)
             labels.append(label.cpu().numpy())
             bag = data[0].to(device).float()
@@ -165,7 +269,7 @@ def ac_val_loop(device,num_classes,model,loader,criterion,n_token,retrun_WSI_fea
             if n_token > 1:
                 loss0 = criterion(sub_preds, label.repeat_interleave(n_token))
             else:
-                loss0 = torch.tensor(0.)
+                loss0 = torch.tensor(0., device=device)
             diff_loss = torch.tensor(0).to(device, dtype=torch.float)
             attns = torch.softmax(attns, dim=-1)
             for i in range(n_token):
@@ -180,8 +284,12 @@ def ac_val_loop(device,num_classes,model,loader,criterion,n_token,retrun_WSI_fea
         return WSI_features
     if return_WSI_attn:
         return WSI_attns
-    val_metrics= cal_scores(bag_predictions_after_normal,labels,num_classes)
-    val_loss_log /= len(loader)
+    val_metrics = _attach_raw_predictions(
+        cal_scores(bag_predictions_after_normal, labels, num_classes),
+        bag_predictions_after_normal,
+        labels,
+    )
+    val_loss_log = _average_loss(val_loss_log, processed_batches, "ac val")
     return val_loss_log,val_metrics
 
 
@@ -191,7 +299,11 @@ def clam_train_loop(device,model,loader,criterion,optimizer,scheduler,bag_weight
     start = time.time()
     model.train()
     train_loss_log = 0
+    processed_batches = 0
     for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
         optimizer.zero_grad()
         label = data[1].long().to(device)
         bag = data[0].to(device).float()
@@ -205,7 +317,7 @@ def clam_train_loop(device,model,loader,criterion,optimizer,scheduler,bag_weight
         optimizer.step()
     if scheduler is not None:
         scheduler.step()
-    train_loss_log /= len(loader)
+    train_loss_log = _average_loss(train_loss_log, processed_batches, "clam train")
     end = time.time()
     total_time = end - start
     return train_loss_log,total_time
@@ -262,8 +374,12 @@ def clam_val_loop(device,num_classes,model,loader,criterion,bag_weight,retrun_WS
     model = model.to(device)
     WSI_features = []
     WSI_attns = []
+    processed_batches = 0
     with torch.no_grad():
         for i, data in enumerate(loader):
+            if data is None:
+                continue
+            processed_batches += 1
             label = data[1].to(device).long()
             labels.append(label.cpu().numpy())
             bag = data[0].to(device).float()
@@ -289,8 +405,12 @@ def clam_val_loop(device,num_classes,model,loader,criterion,bag_weight,retrun_WS
         return WSI_features
     if return_WSI_attn:
         return WSI_attns
-    val_metrics= cal_scores(bag_predictions_after_normal,labels,num_classes)
-    val_loss_log /= len(loader)
+    val_metrics = _attach_raw_predictions(
+        cal_scores(bag_predictions_after_normal, labels, num_classes),
+        bag_predictions_after_normal,
+        labels,
+    )
+    val_loss_log = _average_loss(val_loss_log, processed_batches, "clam val")
     return val_loss_log,val_metrics
 
 def ds_train_loop(device,model,loader,criterion,optimizer,scheduler):
@@ -299,7 +419,11 @@ def ds_train_loop(device,model,loader,criterion,optimizer,scheduler):
     model.train()
     train_loss_log = 0
     model = model.to(device)
+    processed_batches = 0
     for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
         optimizer.zero_grad()
         label = data[1].long().to(device)
         bag = data[0].to(device).float()
@@ -316,7 +440,7 @@ def ds_train_loop(device,model,loader,criterion,optimizer,scheduler):
         optimizer.step()
     if scheduler is not None:
         scheduler.step()
-    train_loss_log /= len(loader)
+    train_loss_log = _average_loss(train_loss_log, processed_batches, "ds train")
     end = time.time()
     total_time = end - start
     return train_loss_log,total_time
@@ -329,8 +453,12 @@ def ds_val_loop(device,num_classes,model,loader,criterion,retrun_WSI_feature = F
     val_loss_log = 0
     model.eval()
     model = model.to(device)
+    processed_batches = 0
     with torch.autograd.set_detect_anomaly(True):
         for i, data in enumerate(loader):
+            if data is None:
+                continue
+            processed_batches += 1
             label = data[1].long().to(device)
             labels.append(label.cpu().numpy())
             bag = data[0].to(device).float()
@@ -355,8 +483,12 @@ def ds_val_loop(device,num_classes,model,loader,criterion,retrun_WSI_feature = F
         return WSI_features
     if return_WSI_attn:
         return WSI_attns
-    val_loss_log /= len(loader)
-    val_metrics= cal_scores(bag_predictions_after_normal,labels,num_classes)
+    val_loss_log = _average_loss(val_loss_log, processed_batches, "ds val")
+    val_metrics = _attach_raw_predictions(
+        cal_scores(bag_predictions_after_normal, labels, num_classes),
+        bag_predictions_after_normal,
+        labels,
+    )
     return val_loss_log,val_metrics
 
 def get_cam_1d(classifier, features):
@@ -379,8 +511,12 @@ def dtfd_train_loop(device, model_list, loader, criterion, optimizer_list, sched
     optimizer_A, optimizer_B = optimizer_list
     scheduler_A, scheduler_B = scheduler_list
 
+    processed_batches = 0
     total_loss = 0
     for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
         label = data[1].long().to(device)
         bag = data[0].to(device).float()
 
@@ -452,11 +588,13 @@ def dtfd_train_loop(device, model_list, loader, criterion, optimizer_list, sched
         optimizer_B.step()
 
     # Step schedulers
-    scheduler_A.step()
-    scheduler_B.step()
+    if scheduler_A is not None:
+        scheduler_A.step()
+    if scheduler_B is not None:
+        scheduler_B.step()
 
     end = time.time()
-    total_loss /= len(loader)
+    total_loss = _average_loss(total_loss, processed_batches, "dtfd train")
     total_time = end - start
 
     return total_loss, total_time
@@ -472,9 +610,13 @@ def dtfd_val_loop(device,num_classes,model_list,loader,criterion,num_Group,grad_
     dimReduction.eval()
     attCls.eval()
     total_loss = 0
+    processed_batches = 0
     y_score=[]
     y_true=[]
     for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
         label = data[1].long().to(device)
         bag = data[0].to(device).float()
 
@@ -528,15 +670,19 @@ def dtfd_val_loop(device,num_classes,model_list,loader,criterion,num_Group,grad_
         total_loss += loss.item()
         pred=(gSlidePred.cpu().data.numpy()).tolist()
         y_score.extend(pred)
-        y_true.extend(label)
+        y_true.extend(label.cpu().numpy())
     if retrun_WSI_feature:
         WSI_features = torch.cat(WSI_features, dim=0).cpu().detach().numpy()
         return WSI_features
     if return_WSI_attn:
         return WSI_attns
     
-    total_loss /= len(loader)
-    val_metrics= cal_scores(y_score,y_true,num_classes)
+    total_loss = _average_loss(total_loss, processed_batches, "dtfd val")
+    val_metrics = _attach_raw_predictions(
+        cal_scores(y_score, y_true, num_classes),
+        y_score,
+        y_true,
+    )
     return total_loss,val_metrics
 
 
@@ -632,3 +778,33 @@ def train_loop_with_mixup(device, model, dataloader, criterion, optimizer, sched
     cost_time = time.time() - start_time
     
     return train_loss, cost_time
+
+def aem_train_loop(device, model, loader, criterion, optimizer, scheduler, lambda_entropy):
+    start = time.time()
+    model.train()
+    train_loss_log = 0
+    processed_batches = 0
+    for i, data in enumerate(loader):
+        if data is None:
+            continue
+        processed_batches += 1
+        optimizer.zero_grad()
+        label = data[1].long().to(device)
+        bag = data[0].to(device).float()
+        
+        output = model(bag, return_entropy=True)
+        logits = output['logits']
+        entropy = output.get('entropy', torch.tensor(0.0, device=device))
+        
+        loss = criterion(logits, label) - lambda_entropy * entropy
+        loss.backward()
+        optimizer.step()
+        
+        train_loss_log += loss.item()
+        
+    if scheduler is not None:
+        scheduler.step()
+    train_loss_log = _average_loss(train_loss_log, processed_batches, "aem train")
+    end = time.time()
+    total_time = end - start
+    return train_loss_log, total_time
