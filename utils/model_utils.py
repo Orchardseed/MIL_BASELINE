@@ -15,8 +15,8 @@ class WarmUpLR(_LRScheduler):
         total_iters: totoal_iters of warmup phase
     """
     def __init__(self, optimizer, warmup_epochs,base_lr):
-        self.warmup_epochs = warmup_epochs
-        self.init_lr = base_lr/self.warmup_epochs
+        self.warmup_epochs = max(int(warmup_epochs), 0)
+        self.target_lrs = [float(base_lr) for _ in optimizer.param_groups]
         super().__init__(optimizer)
 
 
@@ -24,12 +24,15 @@ class WarmUpLR(_LRScheduler):
         """we will use the first m batches, and set the learning
         rate to base_lr * m / total_iters
         """
-        return [self.init_lr * epoch for epoch in range(1,self.warmup_epochs+1)]
+        if self.warmup_epochs <= 0:
+            return list(self.target_lrs)
+        scale = min((self.last_epoch + 1) / self.warmup_epochs, 1.0)
+        return [target_lr * scale for target_lr in self.target_lrs]
 
 
-def get_criterion(criterion):
+def get_criterion(criterion, weight=None):
     if criterion == 'ce':
-        return torch.nn.CrossEntropyLoss()
+        return torch.nn.CrossEntropyLoss(weight=weight)
     elif criterion == 'bce':
         return torch.nn.BCEWithLogitsLoss()
     else:
@@ -88,6 +91,14 @@ def get_scheduler(args,optimizer,base_lr):
         T_max = args.Model.scheduler.cosine_config.T_max
         eta_min = args.Model.scheduler.cosine_config.eta_min
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
+        return scheduler,warmup_scheduler
+    elif sch == 'cosine_restart':
+        T_0 = args.Model.scheduler.cosine_restart_config.T_0
+        T_mult = args.Model.scheduler.cosine_restart_config.T_mult
+        eta_min = args.Model.scheduler.cosine_restart_config.eta_min
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=T_0, T_mult=T_mult, eta_min=eta_min
+        )
         return scheduler,warmup_scheduler
     elif sch == 'none':
         return None,warmup_scheduler
