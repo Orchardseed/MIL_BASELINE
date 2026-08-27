@@ -276,7 +276,9 @@ def test_rrt_raw_source_snapshot_hashes():
             "6c8972823fa04dd6e5fc741487188becfcdb6c6063e9ec0b789ad3550e68dadd",
     }
     actual = {
-        name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+        name: hashlib.sha256(
+            (ROOT / name).read_text(encoding="utf-8").encode("utf-8")
+        ).hexdigest()
         for name in expected
     }
     assert actual == expected
