@@ -553,6 +553,48 @@ def get_model_from_yaml(yaml_args):
             in_dim=yaml_args.Model.in_dim
         )
         return mil_model
+    elif model_name == 'RRT_raw_MIL':
+        from modules.RRT_raw_MIL import RRT_raw_MIL
+
+        unsupported_branches = {
+            'act',
+            'pool',
+            'attn',
+            'ffn',
+            'pos',
+            'epeg',
+            'epeg_2d',
+            'epeg_type',
+            'region_size',
+            'cr_msa',
+            'crmsa_mlp',
+            'all_shortcut',
+            'da_act',
+            'da_gated',
+            'da_bias',
+            'da_dropout',
+        }
+        present_unsupported = unsupported_branches & set(
+            yaml_args.Model.keys()
+        )
+        if present_unsupported:
+            raise ValueError(
+                'unsupported RRT_raw_MIL ablation fields: '
+                + ', '.join(sorted(present_unsupported))
+            )
+        return RRT_raw_MIL(
+            in_dim=yaml_args.Model.in_dim,
+            num_classes=yaml_args.General.num_classes,
+            mlp_dim=yaml_args.Model.mlp_dim,
+            dropout=yaml_args.Model.dropout,
+            region_num=yaml_args.Model.region_num,
+            n_layers=yaml_args.Model.n_layers,
+            n_heads=yaml_args.Model.n_heads,
+            trans_dropout=yaml_args.Model.trans_dropout,
+            epeg_k=yaml_args.Model.epeg_k,
+            crmsa_k=yaml_args.Model.crmsa_k,
+            crmsa_heads=yaml_args.Model.crmsa_heads,
+        )
     elif model_name == 'S4_MIL':
         from modules.S4_MIL.s4_mil import S4_MIL
         d_model = yaml_args.Model.d_model if hasattr(yaml_args.Model, 'd_model') else 512

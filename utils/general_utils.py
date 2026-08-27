@@ -66,19 +66,19 @@ def add_epoch_info_log(epoch_info_log,epoch,train_loss,val_loss,test_loss,val_me
             if key != 'epoch' and key != 'train_loss' and key != 'val_loss' and key != 'test_loss':
                 epoch_info_log[key].append(None)
         return 0
-    if val_metrics != None:
-        for key in val_metrics.keys():
-            epoch_info_log['val_'+key].append(val_metrics[key])
-    else:
-        for key in test_metrics.keys():
-            epoch_info_log['val_'+key].append(None)
-    if test_metrics != None:
-        for key in test_metrics.keys():
-            epoch_info_log['test_'+key].append(test_metrics[key])
-    else:
-        for key in val_metrics.keys():
-            epoch_info_log['test_'+key].append(None)
-        
+    for prefix, metrics in (
+        ("val_", val_metrics),
+        ("test_", test_metrics),
+    ):
+        for column in epoch_info_log:
+            if not column.startswith(prefix) or column == prefix + "loss":
+                continue
+
+            metric_name = column[len(prefix):]
+            value = None if metrics is None else metrics[metric_name]
+            epoch_info_log[column].append(value)
+
+
 def cal_is_stopping(args,epoch_info_log,process_pipeline):
     if process_pipeline == 'Train_Test':
         return False
