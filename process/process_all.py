@@ -100,12 +100,12 @@ def process(args,yaml_path,options):
     elif args.General.MODEL_NAME == 'IB_MIL':
         from .IB_MIL.process_ib_mil import process_IB_MIL
         process_IB_MIL(args)
+    elif args.General.MODEL_NAME == 'REEMBED_AB_MIL':
+        from .REEMBED_AB_MIL.process_reembed_ab_mil import process_REEMBED_AB_MIL
+        process_REEMBED_AB_MIL(args)
     elif args.General.MODEL_NAME == 'RRT_MIL':
         from .RRT_MIL.process_rrt_mil import process_RRT_MIL
         process_RRT_MIL(args)
-    elif args.General.MODEL_NAME == 'RRT_raw_MIL':
-        from .RRT_raw_MIL.process_rrt_raw_mil import process_RRT_raw_MIL
-        process_RRT_raw_MIL(args)
     elif args.General.MODEL_NAME == 'S4_MIL':
         from .S4_MIL.process_s4_mil import process_S4_MIL
         process_S4_MIL(args)

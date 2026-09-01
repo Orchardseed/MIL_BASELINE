@@ -540,11 +540,11 @@ def get_model_from_yaml(yaml_args):
             beta=beta
         )
         return mil_model
-    elif model_name == 'RRT_MIL':
-        from modules.RRT_MIL.rrt_mil import RRT_MIL
+    elif model_name == 'REEMBED_AB_MIL':
+        from modules.REEMBED_AB_MIL.reembed_ab_mil import REEMBED_AB_MIL
         L = yaml_args.Model.L if hasattr(yaml_args.Model, 'L') else 512
         D = yaml_args.Model.D if hasattr(yaml_args.Model, 'D') else 128
-        mil_model = RRT_MIL(
+        mil_model = REEMBED_AB_MIL(
             L=L,
             D=D,
             num_classes=yaml_args.General.num_classes,
@@ -553,8 +553,8 @@ def get_model_from_yaml(yaml_args):
             in_dim=yaml_args.Model.in_dim
         )
         return mil_model
-    elif model_name == 'RRT_raw_MIL':
-        from modules.RRT_raw_MIL import RRT_raw_MIL
+    elif model_name == 'RRT_MIL':
+        from modules.RRT_MIL import RRT_MIL
 
         unsupported_branches = {
             'act',
@@ -579,10 +579,10 @@ def get_model_from_yaml(yaml_args):
         )
         if present_unsupported:
             raise ValueError(
-                'unsupported RRT_raw_MIL ablation fields: '
+                'unsupported RRT_MIL ablation fields: '
                 + ', '.join(sorted(present_unsupported))
             )
-        return RRT_raw_MIL(
+        return RRT_MIL(
             in_dim=yaml_args.Model.in_dim,
             num_classes=yaml_args.General.num_classes,
             mlp_dim=yaml_args.Model.mlp_dim,

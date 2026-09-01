@@ -116,7 +116,8 @@ fix bug of all MIL-models expect DTFD-MIL
 * RET_MIL [Retentive Multiple Instance Learning for Histopathological WSI Classification](https://link.springer.com/chapter/10.1007/978-3-031-72083-3_41) (MICCAI 2024)
 * SC_MIL [Sparse Context-aware MIL for Predicting Cancer Survival Probability Distribution in WSI](https://arxiv.org/abs/2407.00664) (MICCAI 2024)
 * NCIE_MIL [Rethinking Decoupled MIL Framework for Histopathological Slide Classification](https://openreview.net/pdf?id=1GxyidfQzc) (MIDL 2024)
-* RRT_MIL [Towards Foundation Model-Level Performance in Computational Pathology](https://github.com/DearCaat/RRT-MIL) (CVPR 2024)
+* REEMBED_AB_MIL — Residual MLP feature re-embedding with ABMIL attention pooling. Historically named the local `RRT_MIL`; inspired by the RRT-MIL feature re-embedding work but not the upstream R²T architecture. [Towards Foundation Model-Level Performance in Computational Pathology](https://github.com/DearCaat/RRT-MIL) (CVPR 2024)
+* RRT_MIL — Implementation aligned with the upstream RRT-MIL default R²T architecture.
 * PA_MIL [Dynamic Policy-Driven Adaptive Multi-Instance Learning for WSI Classification](https://ieeexplore.ieee.org/document/10656273) (CVPR 2024)
 * MICRO_MIL [Graph-Based MIL for Context-Aware Diagnosis with Microscopic Images](https://arxiv.org/abs/2407.21604) (MICCAI 2025)
 * DYHG_MIL [Dynamic Hypergraph Representation for Bone Metastasis Cancer Analysis](https://arxiv.org/abs/2501.16787) (CMPB 2025)
@@ -172,6 +173,9 @@ You can use the dataset-split-scripts to perform different dataset-split, the de
 ### :fire: **Train/Test MIL**
 #### **Yaml Config**
 You can config the yaml-file in `/configs`. For example, `/configs/AB_MIL.yaml`, A detailed explanation has been written in  `/configs/AB_MIL.yaml`. 
+
+The repository's historical residual re-embedding ABMIL implementation was renamed to `REEMBED_AB_MIL`. The upstream-aligned R²T implementation formerly named `RRT_raw_MIL` now uses the canonical `RRT_MIL` identity. Use `configs/REEMBED_AB_MIL.yaml` or `configs/RRT_MIL.yaml` for new runs as appropriate.
+
 #### **Train & Test**
 Then, `/train_mil.py` will help you like this:
 ``` shell

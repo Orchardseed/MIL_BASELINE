@@ -1,13 +1,14 @@
 import torch
 from torch.utils.data import DataLoader
-from utils.process_utils import get_process_pipeline, build_train_dataloader
+from modules.REEMBED_AB_MIL.reembed_ab_mil import REEMBED_AB_MIL
+from utils.process_utils import get_process_pipeline, get_act
 from utils.wsi_utils import WSI_Dataset
 from utils.general_utils import set_global_seed, init_epoch_info_log, add_epoch_info_log, early_stop
-from utils.model_utils import get_model_from_yaml, get_optimizer, get_scheduler, get_criterion, save_last_model, save_log, model_select
+from utils.model_utils import get_optimizer, get_scheduler, get_criterion, save_last_model, save_log, model_select
 from utils.loop_utils import train_loop, val_loop
 from tqdm import tqdm
 
-def process_RRT_raw_MIL(args):
+def process_REEMBED_AB_MIL(args):
     train_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'train')
     val_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'val')
     test_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'test')
@@ -18,7 +19,12 @@ def process_RRT_raw_MIL(args):
     generator.manual_seed(args.General.seed)
     set_global_seed(args.General.seed)
     num_workers = args.General.num_workers
-    train_dataloader = build_train_dataloader(args, train_dataset, generator)
+    use_balanced_sampler = args.Dataset.balanced_sampler.use
+    if use_balanced_sampler:
+        sampler = train_dataset.get_balanced_sampler(replacement=args.Dataset.balanced_sampler.replacement)
+        train_dataloader = DataLoader(train_dataset, batch_size=1, num_workers=num_workers, generator=generator, sampler=sampler)
+    else:
+        train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=num_workers, generator=generator)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=num_workers)
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=num_workers)
 
@@ -26,7 +32,20 @@ def process_RRT_raw_MIL(args):
 
     device = torch.device(f'cuda:{args.General.device}')
     num_classes = args.General.num_classes
-    mil_model = get_model_from_yaml(args)
+    in_dim = args.Model.in_dim
+    L = args.Model.L if hasattr(args.Model, 'L') else 512
+    D = args.Model.D if hasattr(args.Model, 'D') else 128
+    dropout = args.Model.dropout
+    act = get_act(args.Model.act)
+
+    mil_model = REEMBED_AB_MIL(
+        L=L,
+        D=D,
+        num_classes=num_classes,
+        dropout=dropout,
+        act=act,
+        in_dim=in_dim
+    )
     mil_model.to(device)
 
     print('Model Ready!')

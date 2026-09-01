@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+_pytest_basetemp*/
 *.so
 .Python
 build/
@@ -41,6 +43,11 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Local agent instructions, documentation, and tests
+/AGENTS.md
+/docs/
+/tests/
 
 # Temporary files
 *.tmp

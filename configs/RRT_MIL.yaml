@@ -4,10 +4,10 @@ General:
     num_classes: 2
     num_epochs: 5
     device: 1
-    num_workers: 4
-    best_model_metric: macro_auc  
-    earlystop: 
-        use: False
+    num_workers: 16
+    best_model_metric: macro_auc
+    earlystop:
+        use: false
         patience: 5
         metric: macro_auc
 
@@ -15,30 +15,35 @@ Dataset:
     DATASET_NAME: your_dataset_name
     dataset_csv_path: /path/to/your/dataset.csv
     balanced_sampler:
-        use: False
-        replacement: True
+        use: false
+        replacement: true
 
 Logs:
     log_root_dir: /path/to/your/log_dir/
 
 Model:
-    in_dim: 1024  # Feature dimension (e.g., ResNet50->1024, ViT-S->384)
-    L: 512  # Hidden dimension for feature transformation
-    D: 128  # Hidden dimension for attention/aggregation
-    dropout: 0.1
-    act: relu  # relu, gelu, or silu
+    in_dim: 1024
+    mlp_dim: 512
+    dropout: 0.25
+    region_num: 8
+    n_layers: 2
+    n_heads: 8
+    trans_dropout: 0.1
+    epeg_k: 15
+    crmsa_k: 3
+    crmsa_heads: 8
     optimizer:
-        which: adam    # adam or adamw
+        which: adam
         adam_config:
             lr: 0.0002
             weight_decay: 0.00001
         adamw_config:
             lr: 0.0002
             weight_decay: 0.00001
-    criterion: ce  
+    criterion: ce
     scheduler:
         warmup: 2
-        which: step  # [step, cosine, multi_step, exponential]
+        which: step
         step_config:
             step_size: 3
             gamma: 0.9
@@ -50,4 +55,3 @@ Model:
         cosine_config:
             T_max: 10
             eta_min: 0.0001
-
