@@ -1,4 +1,6 @@
 import torch
+from inspect import signature, Parameter
+from .input_utils import check_feature_structure
 import time
 import torch.nn.functional as F
 import numpy as np
@@ -124,6 +126,37 @@ def _attach_raw_predictions(metrics, probs, labels):
     metrics["_raw_labels"] = [int(label) for label in np.asarray(labels).reshape(-1)]
     return metrics
 
+def coordinate_model_kwargs(model, coords):
+    """Select coordinates only when the receiver explicitly declares them."""
+    parameter = signature(model.forward).parameters.get('coords')
+    accepts = parameter is not None and parameter.kind in (
+        Parameter.POSITIONAL_OR_KEYWORD, Parameter.KEYWORD_ONLY
+    )
+    return {'coords': coords} if accepts and coords is not None else {}
+
+
+def report_missing_coordinates(batch, loader):
+    """Report encountered absence once on a reusable, attribute-capable loader."""
+    # Raw/external iterables without loader state own their input summaries.
+    if batch is not None and len(batch) == 2 and hasattr(loader, '__dict__'):
+        if not getattr(loader, '_input_coords_absence_reported', False):
+            print('Input coordinates: unavailable in an encountered sample.')
+            loader._input_coords_absence_reported = True
+
+
+def prepare_input_batch(data, device, *, expected_dim=None, model=None):
+    """Move one collated pair/triple without repeating reader value preparation."""
+    if len(data) not in (2, 3):
+        raise ValueError('Expected a feature/label pair or feature/label/coords triple.')
+    features = data[0].to(device)
+    labels = data[1].to(device)
+    coords = data[2] if len(data) == 3 else None
+    check_feature_structure(features, coords, batched=True, expected_dim=expected_dim)
+    kwargs = {} if model is None else coordinate_model_kwargs(model, coords)
+    kwargs = {key: value.to(device) for key, value in kwargs.items()}
+    return features, labels, kwargs
+
+
 def train_loop(device,model,loader,criterion,optimizer,scheduler):
     
     start = time.time()
@@ -133,11 +166,12 @@ def train_loop(device,model,loader,criterion,optimizer,scheduler):
     for i, data in enumerate(loader):
         if data is None:
             continue
+        report_missing_coordinates(data, loader)
         processed_batches += 1
         optimizer.zero_grad()
-        label = data[1].long().to(device)
-        bag = data[0].to(device).float()
-        train_logits = model(bag)['logits']
+        bag, label, model_kwargs = prepare_input_batch(data, device, expected_dim=getattr(model, 'in_dim', None), model=model)
+        label = label.long()
+        train_logits = model(bag, **model_kwargs)['logits']
         train_loss = criterion(train_logits, label)
         train_loss_log += train_loss.item()
         train_loss.backward()
@@ -163,19 +197,20 @@ def val_loop(device,num_classes,model,loader,criterion,retrun_WSI_feature = Fals
         for i, data in enumerate(loader):
             if data is None:
                 continue
+            report_missing_coordinates(data, loader)
             processed_batches += 1
-            label = data[1].to(device).long()
+            bag, label, model_kwargs = prepare_input_batch(data, device, expected_dim=getattr(model, 'in_dim', None), model=model)
+            label = label.long()
             labels.append(label.cpu().numpy())
-            bag = data[0].to(device).float()
             if retrun_WSI_feature:
-                WSI_feature = model(bag,return_WSI_feature=True)['WSI_feature']
+                WSI_feature = model(bag, return_WSI_feature=True, **model_kwargs)['WSI_feature']
                 WSI_features.append(WSI_feature)
                 continue
             if return_WSI_attn:
-                WSI_attn = model(bag,return_WSI_attn=True)['WSI_attn']
+                WSI_attn = model(bag, return_WSI_attn=True, **model_kwargs)['WSI_attn']
                 WSI_attns.append(WSI_attn)
                 continue
-            val_logits = model(bag)['logits']
+            val_logits = model(bag, **model_kwargs)['logits']
             val_logits = val_logits.squeeze(0)
             bag_predictions_after_normal.append(torch.softmax(val_logits,0).cpu().numpy())
             val_logits = val_logits.unsqueeze(0)
@@ -714,12 +749,11 @@ def train_loop_with_mixup(device, model, dataloader, criterion, optimizer, sched
     all_labels = []
     
     for idx, batch in enumerate(dataloader):
-        if len(batch) == 3:
-            _, data, label = batch
-        else:
-            data, label = batch
-        all_features.append(data.squeeze(0).to(device))
-        all_labels.append(label.to(device))
+        report_missing_coordinates(batch, dataloader)
+        data, label, _ = prepare_input_batch(
+            batch, device, expected_dim=getattr(model, 'in_dim', None))
+        all_features.append(data.squeeze(0))
+        all_labels.append(label)
     
     prob = mixup_config.get('prob', 0.5)
     n_samples = len(all_features)

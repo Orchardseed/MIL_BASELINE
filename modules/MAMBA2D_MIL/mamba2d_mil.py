@@ -9,6 +9,7 @@ For full 2D Mamba functionality, refer to the original repository.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from utils.input_utils import check_feature_structure
 
 try:
     from mamba.mamba_ssm.modules.mamba_simple import Mamba
@@ -196,6 +197,9 @@ class Mamba2D_MIL(nn.Module):
             x = x.unsqueeze(0)  # (N, D) -> (1, N, D)
         
         x = x.squeeze(0)  # (N, D)
+        if coords is not None and coords.ndim == 3 and coords.shape[0] == 1:
+            coords = coords.squeeze(0)
+        check_feature_structure(x, coords, expected_dim=self.feature_proj[0].in_features)
         N = x.shape[0]
         
         # Feature projection

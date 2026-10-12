@@ -5,16 +5,16 @@ import torch
 from torch.utils.data import DataLoader
 from modules.AEM_MIL.aem_mil import AEM_MIL
 from utils.process_utils import get_process_pipeline, get_act
-from utils.wsi_utils import WSI_Dataset
+from utils.wsi_utils import build_wsi_dataset
 from utils.general_utils import set_global_seed, init_epoch_info_log, add_epoch_info_log, early_stop
 from utils.model_utils import get_optimizer, get_scheduler, get_criterion, save_last_model, save_log, model_select
-from utils.loop_utils import train_loop, val_loop
+from utils.loop_utils import train_loop, val_loop, prepare_input_batch, report_missing_coordinates
 from tqdm import tqdm
 
 def process_AEM_MIL(args):
-    train_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'train')
-    val_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'val')
-    test_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'test')
+    train_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'train', args.Dataset)
+    val_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'val', args.Dataset)
+    test_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'test', args.Dataset)
     process_pipeline = get_process_pipeline(val_dataset, test_dataset)
     args.General.process_pipeline = process_pipeline
     
@@ -83,12 +83,13 @@ def process_AEM_MIL(args):
         train_loss_total = 0.0
         train_count = 0
         mil_model.train()
-        for batch_idx, (data, label) in enumerate(train_dataloader):
-            data = data.to(device)
-            label = label.to(device)
+        for batch_idx, batch in enumerate(train_dataloader):
+            report_missing_coordinates(batch, train_dataloader)
+            data, label, kwargs = prepare_input_batch(
+                batch, device, expected_dim=getattr(mil_model, 'in_dim', None), model=mil_model)
             
             optimizer.zero_grad()
-            output = mil_model(data, return_entropy=True)
+            output = mil_model(data, return_entropy=True, **kwargs)
             logits = output['logits']
             entropy = output.get('entropy', torch.tensor(0.0, device=device))
             

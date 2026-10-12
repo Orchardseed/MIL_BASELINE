@@ -6,13 +6,13 @@ from utils.general_utils import add_epoch_info_log, early_stop, init_epoch_info_
 from utils.loop_utils import train_loop, val_loop
 from utils.model_utils import get_criterion, get_model_from_yaml, get_optimizer, get_scheduler, model_select, save_last_model, save_log
 from utils.process_utils import get_process_pipeline
-from utils.wsi_utils import WSI_Coord_Dataset
+from utils.wsi_utils import build_wsi_dataset
 
 
 def process_PSA_MIL(args):
-    train_dataset = WSI_Coord_Dataset(args.Dataset.dataset_csv_path, 'train')
-    val_dataset = WSI_Coord_Dataset(args.Dataset.dataset_csv_path, 'val')
-    test_dataset = WSI_Coord_Dataset(args.Dataset.dataset_csv_path, 'test')
+    train_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'train', args.Dataset)
+    val_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'val', args.Dataset)
+    test_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'test', args.Dataset)
     process_pipeline = get_process_pipeline(val_dataset, test_dataset)
     args.General.process_pipeline = process_pipeline
 

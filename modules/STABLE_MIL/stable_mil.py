@@ -3,6 +3,7 @@ import warnings
 
 import numpy as np
 import torch
+from utils.input_utils import check_feature_structure
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -73,12 +74,6 @@ def apply_rotary_emb(xq, xk, coords, theta=1000.0, use_random_project=True):
     xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)
     return xq_out.type_as(xq).to(xq.device), xk_out.type_as(xk).to(xk.device)
 
-
-def make_grid_coords(num_tokens, device, dtype):
-    side = int(math.ceil(math.sqrt(num_tokens)))
-    y = torch.arange(side, device=device, dtype=dtype).repeat_interleave(side)
-    x = torch.arange(side, device=device, dtype=dtype).repeat(side)
-    return torch.stack([x, y], dim=-1)[:num_tokens]
 
 
 def minimum_bounding_rectangle(coords_np):
@@ -327,9 +322,8 @@ class STABLE_MIL(nn.Module):
     aggregation. The baseline wrapper computes the original preprocessing
     tensors on the fly from feature coordinates.
 
-    Input can be ``[B, N, in_dim]`` or ``[B, N, in_dim + 2]`` with coords. Real
-    coords are strongly recommended; feature-only inputs use a pseudo-grid only
-    to keep standard MIL CSVs runnable. ``WSI_attn`` is the region/global
+    Input features have shape ``[N, in_dim]`` or ``[B, N, in_dim]`` with required
+    corresponding 2D coordinates supplied separately. ``WSI_attn`` is the region/global
     similarity mapped back to every original patch, so it is an importance score
     for visualization.
     """
@@ -383,16 +377,13 @@ class STABLE_MIL(nn.Module):
         self.apply(initialize_weights)
 
     def _split_features_coords(self, x, coords=None):
-        if x.dim() == 2:
+        if x.ndim == 2:
             x = x.unsqueeze(0)
-        if coords is not None:
-            if coords.dim() == 2:
-                coords = coords.unsqueeze(0)
-            return x[..., : self.in_dim], coords.float()
-        if x.shape[-1] == self.in_dim + 2:
-            return x[..., : self.in_dim], x[..., self.in_dim : self.in_dim + 2].float()
-        coords = make_grid_coords(x.shape[1], x.device, x.dtype).unsqueeze(0).expand(x.shape[0], -1, -1)
-        return x[..., : self.in_dim], coords
+        if coords is not None and coords.ndim == 2:
+            coords = coords.unsqueeze(0)
+        check_feature_structure(x, coords, batched=True,
+                                expected_dim=self.in_dim, requires_coords=True)
+        return x, coords.float()
 
     def _fuse_token_single(self, x, coords):
         labels = fuse_labels(coords, self.ratio)

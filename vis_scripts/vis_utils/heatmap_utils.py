@@ -24,10 +24,9 @@ from feature_extractor.clam_base_utils.utils.model_utils import feature_extracto
 from scipy.stats import percentileofscore
 from feature_extractor.clam_base_utils.utils.constants import MODEL2CONSTANTS
 from tqdm import tqdm
-from utils.loop_utils import get_cam_1d
+from utils.loop_utils import get_cam_1d, coordinate_model_kwargs
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SPATIAL_COORD_MODEL_NAMES = {'PSA_MIL', 'STABLE_MIL'}
 def dtfd_infer_single_slide(model_list,features, **kwargs):
     total_instance = kwargs['total_instance']
     num_Group = kwargs['num_Group']
@@ -85,22 +84,12 @@ def infer_single_slide(model, model_name, features, attention_kwargs = {}, coord
     if model_name == 'DTFD_MIL':
         return dtfd_infer_single_slide(model, features,**attention_kwargs)
     features = features.to(device)
-    coords_np = None
-    if coords is not None:
-        if torch.is_tensor(coords):
-            coords_np = coords.detach().cpu().numpy()
-        else:
-            coords_np = np.asarray(coords)
-    if coords is not None and model_name in SPATIAL_COORD_MODEL_NAMES:
-        coords_for_model = torch.as_tensor(coords_np, device=device, dtype=features.dtype)
-        if coords_for_model.dim() == 3:
-            coords_for_model = coords_for_model.squeeze(0)
-        if features.dim() == 3:
-            coords_for_model = coords_for_model.unsqueeze(0)
-        features = torch.cat([features, coords_for_model[..., :2]], dim=-1)
+    model_kwargs = coordinate_model_kwargs(model, coords)
+    model_kwargs = {key: torch.as_tensor(value, device=features.device)
+                    for key, value in model_kwargs.items()}
     model.eval()
     with torch.inference_mode():
-        A = model(features,return_WSI_attn=True)['WSI_attn']
+        A = model(features, return_WSI_attn=True, **model_kwargs)['WSI_attn']
         A = A.view(-1, 1).detach().cpu().numpy()
     return  A
 

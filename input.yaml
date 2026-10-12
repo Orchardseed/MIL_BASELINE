@@ -1,0 +1,11 @@
+Dataset:
+  features:
+    reader: read_pickle # Supplied CONCH/DINO. Options: read_pickle, read_torch, read_hdf5.
+    key: feature_list_pool # Other known fields: feats, features. Omit for a bare Tensor.
+
+  coordinates:
+    source: same_file # optional_file: if embedded coords are absent, read the paired file.
+    # reader: read_hdf5 # For optional_file. Options: read_pickle, read_torch, read_hdf5.
+    key: positions # Other known field: coords. Missing positions: skip conversion and report.
+    position_format: xyxy # (N,4) boxes [x1,y1,x2,y2]; xy_top_left/xy_center: unchanged (N,2) points.
+    box_point: center # For xyxy only. Options: center, top_left.

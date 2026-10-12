@@ -1,6 +1,7 @@
 import math
 
 import torch
+from utils.input_utils import check_feature_structure
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -241,10 +242,9 @@ class PSA_MIL(nn.Module):
     This module ports the PSA-MIL core idea into MIL_BASELINE: features are first
     adapted by residual fully-connected layers, then processed by spatial
     multi-head attention whose posterior combines feature similarity with a
-    learnable distance-decay prior and dynamic local pruning. The input can be
-    ``[B, N, in_dim]`` or ``[B, N, in_dim + 2]`` with appended ``(x, y)`` coords.
-    If coords are absent, a pseudo-grid is generated for compatibility, but real
-    h5/pt coords are recommended for faithfully using the spatial prior.
+    learnable distance-decay prior and dynamic local pruning. Input features
+    have shape ``[N, in_dim]`` or ``[B, N, in_dim]``. Corresponding real 2D
+    coordinates are required and supplied separately through ``coords``.
 
     ``WSI_feature`` is the pooled slide representation. ``WSI_attn`` is the
     attention pooling weight when ``pool_type=attention``; otherwise it is the
@@ -320,23 +320,15 @@ class PSA_MIL(nn.Module):
         self.head = nn.Linear(hidden_dim, num_classes)
         self.apply(initialize_weights)
 
-    def _pseudo_coords(self, n, device, dtype):
-        side = int(math.ceil(math.sqrt(n)))
-        y = torch.arange(side, device=device, dtype=dtype).repeat_interleave(side)
-        x = torch.arange(side, device=device, dtype=dtype).repeat(side)
-        return torch.stack([x, y], dim=-1)[:n]
 
     def _split_features_coords(self, x, coords=None):
-        if x.dim() == 2:
+        if x.ndim == 2:
             x = x.unsqueeze(0)
-        if coords is not None:
-            if coords.dim() == 2:
-                coords = coords.unsqueeze(0)
-            return x[..., : self.in_dim], coords.float()
-        if x.shape[-1] == self.in_dim + 2:
-            return x[..., : self.in_dim], x[..., self.in_dim : self.in_dim + 2].float()
-        coords = self._pseudo_coords(x.shape[1], x.device, x.dtype).unsqueeze(0).expand(x.shape[0], -1, -1)
-        return x[..., : self.in_dim], coords
+        if coords is not None and coords.ndim == 2:
+            coords = coords.unsqueeze(0)
+        check_feature_structure(x, coords, batched=True,
+                                expected_dim=self.in_dim, requires_coords=True)
+        return x, coords.float()
 
     def _sample_instances(self, x, coords):
         n = x.shape[1]

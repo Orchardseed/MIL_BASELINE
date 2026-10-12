@@ -53,9 +53,164 @@ fix bug of all MIL-models expect DTFD-MIL
 * A library that easily extend by following a uniform definition
 
 ### :bulb: Dataset Uniform Interface
-* User only need to provide the following csvs whether Public/Private Dataset<br/>
+* The repository's execution tools use the following CSV format for public/private datasets; direct model calls do not require CSV files.<br/>
   `/datasets/example_Dataset.csv`
+
+### Prepared MIL inputs
+
+External projects own feature extraction, scientific preprocessing, file discovery,
+source-field interpretation, and any thin conversion to tensors. Such conversion
+does not require saving another copy of a feature file. File extensions such as
+`.conch` or `.dino` do not establish the serialization format. The execution-side
+readers support their documented HDF5/PyTorch formats; these are conveniences,
+not mandatory model-library formats.
+
+`N` is the instance count, `D` is the feature width excluding coordinates, and
+`B` is the bag count. One prepared bag is `(N,D)`; current execution loaders use
+`batch_size=1` and deliver `(1,N,D)`. Spatial coordinates follow `(N,2)` to
+`(1,N,2)`. This does not promise multi-bag batching or universal unbatched-model
+support. A one-instance bag remains `(1,D)` before batching.
+
+The following are alternative routes. `samples` is a caller-resolved list of
+`feature_path`, `label`, and optional `coords_path` records; `input_config` is
+the parsed `Dataset` input mapping. `project_features` and `project_coords`
+are caller-provided tensors with established row correspondence.
+
+```python
+from utils.wsi_utils import PickleWSIDataset
+from utils.input_utils import prepare_feature_bag
+from modules.AB_MIL.ab_mil import AB_MIL
+from modules.DAG_MIL.dag_mil import DAG_MIL
+
+# Built-in input route: this example declares available coordinates.
+dataset = PickleWSIDataset(samples, input_config)
+features, label, coords = dataset[0]
+coordinate_model = DAG_MIL(in_dim=features.shape[-1])
+output = coordinate_model(features.unsqueeze(0), coords=coords.unsqueeze(0))
+
+# Alternative: external thin reader / its own Dataset prepares the tensors.
+features, coords = prepare_feature_bag(project_features, project_coords)
+feature_only_model = AB_MIL(in_dim=features.shape[-1])
+output = feature_only_model(features.unsqueeze(0))
+```
+
+A Dataset item is `(features, label)` when coordinates are absent and
+`(features, label, coords)` when present. A direct caller can use either model
+interface with its prepared tensors; it needs no second Dataset pass, CSV,
+shared YAML, or rewritten feature file. Ordinary labels belong to external
+loss/metrics. Existing CLAM auxiliary training retains its declared label input.
+
+
+For feature-only use, `prepare_feature_bag(source_features)` needs no coordinates.
+Ordinary readers prepare FP32 features once, including before augmentation;
+source files/tensors stay unchanged. FP16/BF16/FP32/FP64 storage is accepted when
+values remain finite after preparation. Integer/boolean/complex features are not
+silently converted. Coordinates may be integers or real floating values; common
+preparation preserves their dtype and each model owns its coordinate computation
+precision. Callers move inputs and models to the same selected device.
+
+The model's configured `in_dim` must equal `D`. An internal projection from 384 to
+768 is valid; constructing `in_dim=768` for 384-wide inputs is not. Readers do not
+pad, truncate, pool, normalize, reweight, or fabricate coordinates. Spatial
+models/modes needing coordinates fail if they are absent; feature-only modes
+remain valid without them. Coordinates must have exactly two components and
+match feature instance order/count. Semantic row correspondence belongs to
+external preparation. Packed `D+2` model calls are no longer supported.
+
+Checks report short English errors, such as `Coordinates are required.` or
+`Feature width mismatch: expected 768, got 384.` Prepared features and supplied
+coordinates must be finite and nonempty. Labeled execution CSVs preserve original
+path/label row pairs: both-empty padding is allowed; one-sided missing cells fail.
+
+This input work covers ordinary bags and 2D WSI inputs. It does not add MRI/3D,
+task-head switching, or establish Patch-GCN spatial fidelity. Model-specific
+algorithm requirements still apply. Correct input delivery alone does not certify
+complete visualization workflows. Development tests are maintained by the agent,
+not required as a normal user workflow step.
   
+### Shared execution input settings
+
+Built-in train, independent test, and feature-export entries load the selected
+model YAML plus repository-root `input.yaml`. Use `--input_path` to select
+another shared file. Explicit shared `Dataset` fields override matching model
+values recursively; omitted fields retain existing CSV/sampler settings. The
+original train `--options` runs last with its existing conversions. No new
+`null` parser or key-clearing mechanism is provided. For a fresh bare PyTorch
+Tensor configuration, select `read_torch` and omit `features.key`; dictionaries
+name their actual field. HDF5 requires explicit field keys.
+
+The active default, with verified reader/field alternatives, is:
+
+```yaml
+Dataset:
+  features:
+    reader: read_pickle # Supplied CONCH/DINO. Options: read_pickle, read_torch, read_hdf5.
+    key: feature_list_pool # Other known fields: feats, features. Omit for a bare Tensor.
+
+  coordinates:
+    source: same_file # optional_file: if embedded coords are absent, read the paired file.
+    # reader: read_hdf5 # For optional_file. Options: read_pickle, read_torch, read_hdf5.
+    key: positions # Other known field: coords. Missing positions: skip conversion and report.
+    position_format: xyxy # (N,4) boxes [x1,y1,x2,y2]; xy_top_left/xy_center: unchanged (N,2) points.
+    box_point: center # For xyxy only. Options: center, top_left.
+```
+
+`same_file` reads declared embedded positions from the same loaded object.
+`optional_file` also checks embedded positions first, then reads the declared
+`coords_path` only when embedded positions are absent. Configure the real
+reader, key and position representation for the applicable source; file suffixes
+and field names do not establish serialization or scientific meaning. Existing
+`h5_csv_path` pairing can resolve companion paths before Dataset access. The
+same CSV may serve as both `Dataset.dataset_csv_path` and `Dataset.h5_csv_path`:
+the sample reader uses fixed `<group>_slide_path` and `<group>_label` columns,
+while companion pairing reads its fixed `h5_path` column. It matches
+filename stems (`A.pt` with `A.h5`), regardless of row order. `features.key` and
+`coordinates.key` name fields inside serialized files, not CSV columns. For
+example, an HDF5 file with a `coords` dataset uses `coordinates.key: coords`.
+
+Absent optional fields or an absent pair produce a pair item, bypass coordinate
+conversion, and receive a brief summary in stateful consuming loaders. An
+explicit unreadable path fails. Present invalid coordinates fail without a
+companion fallback. A model requiring coordinates still fails on an absent
+coordinate input. Feature-only receivers retain Dataset coordinates but receive
+no unused coordinate argument or device transfer.
+
+Two-column `xy_top_left` / `xy_center` points stay unchanged. For declared
+`xyxy` boxes, the default `center` derives `[(x1+x2)/2, (y1+y2)/2]` in FP64;
+`top_left` selects `[x1,y1]`. Source boxes and feature row order remain intact.
+
+Train/test preflight their established output destinations before writing;
+existing run YAML, copied CSV or test-log conflicts raise an error. Existing run
+copies record the effective merged settings and actual selected CSV. Source
+YAML/files remain inputs. For built-in CDP training or independent evaluation,
+first run `modules/CDP_MIL/get_BayesianGaussian_pt.py` independently with a flat
+CSV containing `slide_path` and bare PyTorch feature Tensors of shape `(N,D)`.
+Pass its centroid output directory as `--save_dir`; the same arbitrary directory
+must be set in `configs/CDP_MIL.yaml` as `Dataset.BeyesGuassian_pt_dir`, directly
+after `Dataset.dataset_csv_path` (or explicitly overridden by the shared
+`Dataset` settings). For these saved bare Tensors, set repository-root
+`input.yaml` to `features.reader: read_torch` and omit `features.key`; the sample
+default shown above remains for supplied CONCH/DINO pickle bags.
+
+The CDP training split CSV keeps original feature paths and labels in
+`train_slide_path` / `train_label`, `val_slide_path` / `val_label`, and
+`test_slide_path` / `test_label`. Independent evaluation uses original
+`test_slide_path` / `test_label` in its selected CSV. For example, producer input
+`/data/features/A.pt` yields `/data/centroids/A_bayesian_gaussian.pt` when
+`--save_dir /data/centroids` is used. CDP resolves this saved path before the
+existing Dataset loads it; neither the split CSV nor the source feature changes.
+Missing `BeyesGuassian_pt_dir` raises `BeyesGuassian_pt_dir is required for
+CDP_MIL.`; a missing saved file raises `Required centroid file not found: ...`.
+There is no fallback to the original bag or automatic clustering during Dataset
+access. CDP receives one prepared centroid-feature Tensor; labels remain for
+loss and evaluation. Existing model outputs, metrics, checkpoints and run
+records keep their established meanings and layout.
+
+Local input/CPU verification on 2026-10-10: 940 passed, one LONG import failure
+(`ModuleNotFoundError: No module named 'xformers'`). Full LONG/Mamba backend
+computation, complete scientific workflows and formal Linux acceptance remain
+unverified; CLI help and constructor coverage do not establish them.
+
 ### :closed_umbrella: Supported Dataset-Split-Method
 * User-difined Train-Val-Test split
 * User-difined Train-Val split
@@ -189,7 +344,7 @@ The `/test_mil.py` will help you test pretrained MIL models like this:
 ``` shell
 python test_mil.py --yaml_path /configs/AB_MIL.yaml --test_dataset_csv /your/test_csv/path --model_weight_path /your/model_weights/path --test_log_dir /your/test/log/dir
 ```
-You should ensure the `--test_dataset_csv` contains the column of `test_slide_path` which contains the `/path/to/your_pt.pt`. If `--test_dataset_csv` also contains the 'test_slide_label' column, the metrics will be calculated and written to logs.
+You should ensure the `--test_dataset_csv` contains the column of `test_slide_path` which contains the `/path/to/your_pt.pt`. The current labeled input route also requires `test_label`; path/label cells stay paired. Training CSV groups use `train_slide_path` / `train_label` and `val_slide_path` / `val_label`.
 
 
 ### :fountain: **Visualization**

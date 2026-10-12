@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from modules.CDP_MIL.cdp_mil import CDP_MIL
 from utils.process_utils import get_process_pipeline,get_act
-from utils.wsi_utils import CDP_MIL_WSI_Dataset
+from utils.wsi_utils import read_samples_from_csv, resolve_cdp_samples, select_wsi_dataset
 from utils.general_utils import set_global_seed,init_epoch_info_log,add_epoch_info_log,early_stop
 from utils.model_utils import get_optimizer,get_scheduler,get_criterion,save_last_model,save_log,model_select
 from utils.loop_utils import train_loop,val_loop
@@ -10,11 +10,16 @@ from tqdm import tqdm
     
 def process_CDP_MIL(args):
 
-    BayesianGaussian_pt_dir = args.Dataset.BeyesGuassian_pt_dir
-    print(BayesianGaussian_pt_dir)
-    train_dataset = CDP_MIL_WSI_Dataset(args.Dataset.dataset_csv_path,BayesianGaussian_pt_dir,'train')
-    val_dataset = CDP_MIL_WSI_Dataset(args.Dataset.dataset_csv_path,BayesianGaussian_pt_dir,'val')
-    test_dataset = CDP_MIL_WSI_Dataset(args.Dataset.dataset_csv_path,BayesianGaussian_pt_dir,'test')
+    centroid_dir = args.Dataset.get('BeyesGuassian_pt_dir')
+    train_samples = read_samples_from_csv(args.Dataset.dataset_csv_path, 'train')
+    train_centroid_samples = resolve_cdp_samples(train_samples, centroid_dir)
+    train_dataset = select_wsi_dataset(train_centroid_samples, args.Dataset)
+    val_samples = read_samples_from_csv(args.Dataset.dataset_csv_path, 'val')
+    val_centroid_samples = resolve_cdp_samples(val_samples, centroid_dir)
+    val_dataset = select_wsi_dataset(val_centroid_samples, args.Dataset)
+    test_samples = read_samples_from_csv(args.Dataset.dataset_csv_path, 'test')
+    test_centroid_samples = resolve_cdp_samples(test_samples, centroid_dir)
+    test_dataset = select_wsi_dataset(test_centroid_samples, args.Dataset)
     process_pipeline = get_process_pipeline(val_dataset,test_dataset) 
     args.General.process_pipeline = process_pipeline
     '''

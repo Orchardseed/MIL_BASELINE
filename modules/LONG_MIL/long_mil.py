@@ -17,6 +17,7 @@ except:
 
 
 import torch
+from utils.input_utils import check_feature_structure
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
@@ -214,24 +215,28 @@ class LONG_MIL_V1(nn.Module):
         self.slope_m = get_slopes(self.n_heads).to(torch.float16)
 
 
-    def forward(self, x,  return_WSI_attn = False, return_WSI_feature = False):
+    def forward(self, x, coords=None, return_WSI_attn=False, return_WSI_feature=False):
         '''
-        :param x:  shape = N * (feat_size+2), 2 for x-y 2d-position
+        :param x: (N,D) or (1,N,D) features; coords: corresponding 2D positions
         :return:
         '''
+        if x.ndim == 3 and x.shape[0] == 1:
+            x = x.squeeze(0)
+        if coords is not None and coords.ndim == 3 and coords.shape[0] == 1:
+            coords = coords.squeeze(0)
+        check_feature_structure(x, coords, expected_dim=self.in_dim, requires_coords=True)
         self.alibi = self.alibi.to(x.device)
         self.slope_m = self.slope_m.to(x.device)
         forward_return = {}
-        x = x.squeeze(0)
-        h = x[:, :self.in_dim].unsqueeze(0)
+        h = x.unsqueeze(0)
         h = self._fc1(h)
 
         # option 1 use local_alibi +global_alibi
-        freqs_cis, alibi_local, alibi_global = self.positional_embedding(x, use_alibi=True)
+        freqs_cis, alibi_local, alibi_global = self.positional_embedding(coords, use_alibi=True)
         # option 2 combine alibi and rope
-        # freqs_cis, alibi_local, alibi_global = self.positional_embedding(x,use_rope=True,use_alibi=True)
+        # freqs_cis, alibi_local, alibi_global = self.positional_embedding(coords,use_rope=True,use_alibi=True)
         # option 3 use rope only
-        # freqs_cis, alibi_local, alibi_global = self.positional_embedding(x,use_rope=True)
+        # freqs_cis, alibi_local, alibi_global = self.positional_embedding(coords,use_rope=True)
 
 
         h, _ = self.layer1(h, freqs_cis, alibi_local)
@@ -253,7 +258,7 @@ class LONG_MIL_V1(nn.Module):
             forward_return['WSI_attn'] = WSI_attn
         return forward_return
 
-    def positional_embedding(self, x, use_alibi=False, use_rope=False):
+    def positional_embedding(self, coords, use_alibi=False, use_rope=False):
         # scale = 1  # for 20x 224 with 112 overlap (or 40x 224)
         scale = 2  # for 20x 224 with 0 overlap
         shape = 112 # or 128
@@ -262,7 +267,7 @@ class LONG_MIL_V1(nn.Module):
         alibi_bias = None
         alibi_bias2 = None
         if use_rope or use_alibi:
-            abs_pos = x[::, -2:]
+            abs_pos = coords
             # pdb.set_trace()
             # print(abs_pos)
             x_pos, y_pos = abs_pos[:, 0], abs_pos[:, 1]
@@ -296,10 +301,11 @@ class LONG_MIL_V1(nn.Module):
 class LONG_MIL(nn.Module):
     def __init__(self, num_classes, in_dim,hidden_dim,alibi_positon_embedding_path,version = 'v1'):
         super(LONG_MIL, self).__init__()
+        self.in_dim = in_dim
         if version == 'v1':
             self.model = LONG_MIL_V1(num_classes, in_dim,hidden_dim,alibi_positon_embedding_path)
         elif version == 'v2':
             raise NotImplementedError
         
-    def forward(self, x,  return_WSI_attn = False, return_WSI_feature = False):
-        return self.model(x, return_WSI_attn, return_WSI_feature)
+    def forward(self, x, coords=None, return_WSI_attn=False, return_WSI_feature=False):
+        return self.model(x, coords=coords, return_WSI_attn=return_WSI_attn, return_WSI_feature=return_WSI_feature)

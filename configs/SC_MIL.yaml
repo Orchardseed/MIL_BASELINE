@@ -14,8 +14,7 @@ General:
 Dataset:
     DATASET_NAME: your_dataset_name
     dataset_csv_path: /path/to/your/dataset.csv
-    h5_csv_path: null  # Optional: path to h5.csv file. If null, will use dummy coords (grid-based)
-    use_dummy_coords: true  # Use dummy coords if h5_csv_path is not provided
+    h5_csv_path: null  # Supply corresponding HDF5 coordinates when clustering requires them.
     balanced_sampler:
         use: False
         replacement: True
@@ -24,7 +23,7 @@ Dataset:
     #  h5_path
     #  /path/to/your/slide_name.h5
     #  /path/to/your/slide_name.h5
-    # If h5_csv_path is null, dummy coords will be generated based on patch indices
+    # Missing coordinates remain absent; no grid is generated.
 
 Logs:
     log_root_dir: /path/to/your/log_dir/

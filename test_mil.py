@@ -1,9 +1,15 @@
 import argparse
-from utils.yaml_utils import read_yaml
+from utils.yaml_utils import read_effective_yaml, write_effective_yaml
+from pathlib import Path
 from torch.utils.data import DataLoader
 from utils.loop_utils import val_loop,clam_val_loop,ds_val_loop,dtfd_val_loop
 import warnings
-from utils.wsi_utils import WSI_Dataset,CDP_MIL_WSI_Dataset,LONG_MIL_WSI_Dataset,WSI_Coord_Dataset
+from utils.wsi_utils import (
+    build_wsi_dataset,
+    read_samples_from_csv,
+    resolve_cdp_samples,
+    select_wsi_dataset,
+)
 import torch
 import shutil
 import os
@@ -13,20 +19,28 @@ warnings.filterwarnings('ignore')
 def test(args):
     yaml_path = args.yaml_path
     print(f"MIL-model-yaml path: {yaml_path}")
-    yaml_args = read_yaml(yaml_path)
+    yaml_args = read_effective_yaml(yaml_path, args.input_path)
+    yaml_args.Dataset.dataset_csv_path = args.test_dataset_csv
     model_name = yaml_args.General.MODEL_NAME
     num_classes = yaml_args.General.num_classes
     test_dataset_csv = args.test_dataset_csv
     print(f"Dataset csv path: {test_dataset_csv}")
-    # CDP_MIL and LONG_MIL models have different dataset pipeline
+    output_dir = Path(args.test_log_dir)
+    destinations = [
+        output_dir / f'Test_{model_name}.yaml',
+        output_dir / f'Test_dataset_{yaml_args.Dataset.DATASET_NAME}.csv',
+        output_dir / f'Test_Log_{model_name}.txt',
+    ]
+    conflicts = [str(path) for path in destinations if path.exists()]
+    if conflicts:
+        raise FileExistsError('Output already exists: ' + ', '.join(conflicts))
     if model_name == 'CDP_MIL':
-        test_ds = CDP_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.BeyesGuassian_pt_dir,'test')
-    elif model_name == 'LONG_MIL':
-        test_ds = LONG_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.h5_csv_path,'test')
-    elif model_name in ['PSA_MIL', 'STABLE_MIL']:
-        test_ds = WSI_Coord_Dataset(test_dataset_csv,'test')
+        test_samples = read_samples_from_csv(test_dataset_csv, 'test')
+        test_centroid_samples = resolve_cdp_samples(
+            test_samples, yaml_args.Dataset.get('BeyesGuassian_pt_dir'))
+        test_ds = select_wsi_dataset(test_centroid_samples, yaml_args.Dataset)
     else:
-        test_ds = WSI_Dataset(test_dataset_csv,'test')
+        test_ds = build_wsi_dataset(test_dataset_csv, 'test', yaml_args.Dataset)
     test_dataloader = DataLoader(test_ds,batch_size=1,shuffle=False)
     model_weight_path = args.model_weight_path
     print(f"Model weight path: {model_weight_path}")
@@ -70,7 +84,7 @@ def test(args):
     test_log_dir = args.test_log_dir
     os.makedirs(test_log_dir,exist_ok=True)
     new_yaml_path = os.path.join(test_log_dir,f'Test_{model_name}.yaml')
-    shutil.copyfile(yaml_path,new_yaml_path)
+    write_effective_yaml(yaml_args, new_yaml_path)
     new_test_dataset_csv_path = os.path.join(test_log_dir,f'Test_dataset_{yaml_args.Dataset.DATASET_NAME}.csv')
     shutil.copyfile(test_dataset_csv,new_test_dataset_csv_path)
     test_log_path = os.path.join(test_log_dir,f'Test_Log_{model_name}.txt')
@@ -84,6 +98,7 @@ def test(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--yaml_path',type=str,default='/path/to/your/config-yaml',help='path to MIL-model-yaml file')
+    parser.add_argument('--input_path', type=str, default=None, help='path to shared input yaml file')
     parser.add_argument('--test_dataset_csv',type=str,default='/path/to/your/ds-csv-path',help='path to dataset csv')
     parser.add_argument('--model_weight_path',type=str,default='/path/to/your/model-weight',help='path to model weights ')
     parser.add_argument('--test_log_dir',type=str,default='/path/to/your/test-log-dir',help='path to test log dir')

@@ -17,7 +17,9 @@ Dataset:
     # to use k-fold train-val/k-fold train-val then test, open dataset_root_dir
     
     dataset_csv_path: /path/to/your/dataset.csv
-    BeyesGuassian_pt_dir: /path/to/your/BeyesGuassian_npy_dir/ # speicial dependences for CDP_MIL,you can get it by running /modules/CDP_MIL/get_BayesianGaussian_pt.py
+    BeyesGuassian_pt_dir: /path/to/your/BeyesGuassian_npy_dir/ # Saved centroid directory; use the producer's --save_dir.
+    # Keep original feature paths in train_slide_path / val_slide_path / test_slide_path.
+    # Generate centroid files separately with modules/CDP_MIL/get_BayesianGaussian_pt.py.
     # dataset_root_dir: /dir/to/your/dataset_dir/
     balanced_sampler:
         use: False

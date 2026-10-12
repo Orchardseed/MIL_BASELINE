@@ -56,3 +56,7 @@ tmp/
 
 # Fixed external source snapshots for MIL architecture audit
 /third_party/
+
+# Local feature samples
+/datasets/168178_HE.CVS_dir/
+/datasets/168178_HE.CVS_000_dir/

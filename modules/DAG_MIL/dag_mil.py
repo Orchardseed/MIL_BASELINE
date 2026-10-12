@@ -1,6 +1,7 @@
 import math
 
 import torch
+from utils.input_utils import check_feature_structure
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -19,10 +20,8 @@ def initialize_weights(module):
 class DAG_MIL(nn.Module):
     """DAG-MIL with real coordinate support.
 
-    The model accepts either ``[B, N, in_dim]`` plus an explicit ``coords``
-    argument, or ``[B, N, in_dim + 2]`` where the last two values are ``(x, y)``
-    coordinates. Feature-only input falls back to a pseudo grid so standard MIL
-    csv files remain runnable, but real h5/pt coordinates are preferred.
+    Features have shape ``[N, in_dim]`` or ``[B, N, in_dim]``. Corresponding
+    real 2D coordinates are required through the separate ``coords`` argument.
     """
 
     def __init__(
@@ -79,23 +78,15 @@ class DAG_MIL(nn.Module):
         self.expand_alpha = nn.Parameter(torch.randn(1))
         self.apply(initialize_weights)
 
-    def _pseudo_coords(self, n, device, dtype):
-        side = int(math.ceil(math.sqrt(n)))
-        y = torch.arange(side, device=device, dtype=dtype).repeat_interleave(side)
-        x = torch.arange(side, device=device, dtype=dtype).repeat(side)
-        return torch.stack([x, y], dim=-1)[:n]
 
     def _split_features_coords(self, x, coords=None):
-        if x.dim() == 2:
+        if x.ndim == 2:
             x = x.unsqueeze(0)
-        if coords is not None:
-            if coords.dim() == 2:
-                coords = coords.unsqueeze(0)
-            return x[..., : self.in_dim], coords.float()
-        if x.shape[-1] == self.in_dim + 2:
-            return x[..., : self.in_dim], x[..., self.in_dim:self.in_dim + 2].float()
-        coords = self._pseudo_coords(x.shape[1], x.device, x.dtype).unsqueeze(0).expand(x.shape[0], -1, -1)
-        return x[..., : self.in_dim], coords
+        if coords is not None and coords.ndim == 2:
+            coords = coords.unsqueeze(0)
+        check_feature_structure(x, coords, batched=True,
+                                expected_dim=self.in_dim, requires_coords=True)
+        return x, coords.float()
 
     def _sample_instances(self, x, coords):
         n = x.shape[1]

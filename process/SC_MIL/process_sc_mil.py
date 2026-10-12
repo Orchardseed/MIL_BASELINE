@@ -7,10 +7,10 @@ import numpy as np
 from torch.utils.data import DataLoader
 from modules.SC_MIL.sc_mil import SC_MIL
 from utils.process_utils import get_process_pipeline, get_act
-from utils.wsi_utils import LONG_MIL_WSI_Dataset, SC_MIL_WSI_Dataset  # SC_MIL dataset with dummy coords support
+from utils.wsi_utils import build_wsi_dataset
 from utils.general_utils import set_global_seed, init_epoch_info_log, add_epoch_info_log, early_stop
 from utils.model_utils import get_optimizer, get_scheduler, get_criterion, save_last_model, save_log, model_select
-from utils.loop_utils import train_loop, val_loop, cal_scores
+from utils.loop_utils import prepare_input_batch, report_missing_coordinates, cal_scores
 from tqdm import tqdm
 
 def process_SC_MIL(args):
@@ -18,15 +18,13 @@ def process_SC_MIL(args):
     Training process for SC_MIL
     SC_MIL can work with or without h5 files:
     - If h5_csv_path is provided and exists, uses coords from h5 files
-    - Otherwise, generates dummy coords based on patch indices
+    - Otherwise, coordinates remain absent; the active model mode checks them.
     """
-    h5_csv_path = getattr(args.Dataset, 'h5_csv_path', None)
-    use_dummy_coords = getattr(args.Dataset, 'use_dummy_coords', True)
     
-    # Use SC_MIL_WSI_Dataset which supports dummy coords
-    train_dataset = SC_MIL_WSI_Dataset(args.Dataset.dataset_csv_path, h5_csv_path, 'train', use_dummy_coords=use_dummy_coords)
-    val_dataset = SC_MIL_WSI_Dataset(args.Dataset.dataset_csv_path, h5_csv_path, 'val', use_dummy_coords=use_dummy_coords)
-    test_dataset = SC_MIL_WSI_Dataset(args.Dataset.dataset_csv_path, h5_csv_path, 'test', use_dummy_coords=use_dummy_coords)
+    # Coordinates are delivered separately when available.
+    train_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'train', args.Dataset)
+    val_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'val', args.Dataset)
+    test_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'test', args.Dataset)
     process_pipeline = get_process_pipeline(val_dataset, test_dataset)
     args.General.process_pipeline = process_pipeline
     
@@ -103,17 +101,13 @@ def process_SC_MIL(args):
         train_loss_total = 0.0
         train_count = 0
         mil_model.train()
-        for batch_idx, (data, label) in enumerate(train_dataloader):
-            data = data.to(device)
-            label = label.to(device)
-            
-            # Extract features and coords from concatenated input
-            # LONG_MIL_WSI_Dataset returns (N, D+2) where last 2 dims are coords
-            coords = data[:, :, -2:]  # (1, N, 2)
-            features = data[:, :, :-2]  # (1, N, D)
+        for batch_idx, batch in enumerate(train_dataloader):
+            report_missing_coordinates(batch, train_dataloader)
+            features, label, model_kwargs = prepare_input_batch(
+                batch, device, expected_dim=mil_model.in_dim, model=mil_model)
             
             optimizer.zero_grad()
-            output = mil_model(features, coords=coords)
+            output = mil_model(features, **model_kwargs)
             logits = output['logits']
             loss = criterion(logits, label)
             loss.backward()
@@ -164,15 +158,11 @@ def val_loop_SC_MIL(device, num_classes, model, dataloader, criterion):
     all_labels = []
     
     with torch.no_grad():
-        for data, label in dataloader:
-            data = data.to(device)
-            label = label.to(device)
-            
-            # Extract features and coords
-            coords = data[:, :, -2:]  # (1, N, 2)
-            features = data[:, :, :-2]  # (1, N, D)
-            
-            output = model(features, coords=coords)
+        for batch in dataloader:
+            report_missing_coordinates(batch, dataloader)
+            features, label, model_kwargs = prepare_input_batch(
+                batch, device, expected_dim=getattr(model, 'in_dim', None), model=model)
+            output = model(features, **model_kwargs)
             logits = output['logits']
             loss = criterion(logits, label)
             

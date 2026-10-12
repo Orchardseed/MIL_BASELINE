@@ -5,16 +5,16 @@ import torch
 from torch.utils.data import DataLoader
 from modules.TDA_MIL.tda_mil import TDA_MIL
 from utils.process_utils import get_process_pipeline, get_act
-from utils.wsi_utils import WSI_Dataset
+from utils.wsi_utils import build_wsi_dataset
 from utils.general_utils import set_global_seed, init_epoch_info_log, add_epoch_info_log, early_stop
 from utils.model_utils import get_optimizer, get_scheduler, get_criterion, save_last_model, save_log, model_select
 from utils.loop_utils import train_loop, val_loop
 from tqdm import tqdm
 
 def process_TDA_MIL(args):
-    train_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'train')
-    val_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'val')
-    test_dataset = WSI_Dataset(args.Dataset.dataset_csv_path, 'test')
+    train_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'train', args.Dataset)
+    val_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'val', args.Dataset)
+    test_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'test', args.Dataset)
     process_pipeline = get_process_pipeline(val_dataset, test_dataset)
     args.General.process_pipeline = process_pipeline
     

@@ -3,10 +3,11 @@ SC_MIL - Sparse Context-aware Multiple Instance Learning
 Reference: Sparse Context-aware Multiple Instance Learning for Predicting Cancer Survival Probability Distribution in Whole Slide Images
 Paper: TODO
 
-Note: This model requires coordinates (coords) as input, similar to LONG_MIL.
-The coords should be provided from h5 files.
+Note: Coordinates are required when the active clustering path uses them.
+Coordinates are supplied as tensors independently of their storage format.
 """
 import torch
+from utils.input_utils import check_feature_structure
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -139,7 +140,7 @@ class ClusterLocalAttention(nn.Module):
                 raise ValueError("Either n_cluster or cluster_size must be specified")
             
             if coords is None:
-                raise ValueError("coords required for clustering")
+                raise ValueError("Coordinates are required for clustering.")
             
             # K-means clustering
             coords_np = coords.squeeze().cpu().numpy()
@@ -318,6 +319,8 @@ class SC_MIL(nn.Module):
         if coords is not None and len(coords.shape) == 2:
             coords = coords.unsqueeze(0)  # (N, 2) -> (1, N, 2)
         
+        check_feature_structure(x, coords, batched=True, expected_dim=self.in_dim)
+
         # Soft filter (optional)
         if self.with_softfilter:
             x, logits_filter = self.softfilter(x)

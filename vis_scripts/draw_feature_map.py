@@ -9,11 +9,11 @@ import argparse
 from utils.model_utils import get_model_from_yaml
 import matplotlib.pyplot as plt
 import argparse
-from utils.yaml_utils import read_yaml
+from utils.yaml_utils import read_effective_yaml
 from torch.utils.data import DataLoader
 from utils.loop_utils import val_loop,clam_val_loop,ds_val_loop,dtfd_val_loop
 import warnings
-from utils.wsi_utils import WSI_Dataset,CDP_MIL_WSI_Dataset,LONG_MIL_WSI_Dataset,WSI_Coord_Dataset
+from utils.wsi_utils import build_wsi_dataset
 import torch
 from utils.model_utils import get_model_from_yaml,get_criterion
 import ast
@@ -48,7 +48,8 @@ def draw_tsne(feature_tensor, label_tensor, id2class, save_path, fig_size = (10,
     
 def main(args):
     yaml_path = args.yaml_path
-    yaml_args = read_yaml(yaml_path)
+    yaml_args = read_effective_yaml(yaml_path, args.input_path)
+    yaml_args.Dataset.dataset_csv_path = args.test_dataset_csv
     model_name = yaml_args.General.MODEL_NAME
     mil_model = get_model_from_yaml(yaml_args)
     model_name = yaml_args.General.MODEL_NAME
@@ -56,16 +57,9 @@ def main(args):
     num_classes = yaml_args.General.num_classes
     test_dataset_csv = args.test_dataset_csv
     print(f"Dataset csv path: {test_dataset_csv}")
-    # CDP_MIL and LONG_MIL models have different dataset pipeline
     if model_name == 'CDP_MIL':
         raise NotImplementedError("CDP_MIL model is not supported for feature map visualization now.")
-        test_ds = CDP_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.BeyesGuassian_pt_dir,'test')
-    elif model_name == 'LONG_MIL':
-        test_ds = LONG_MIL_WSI_Dataset(test_dataset_csv,yaml_args.Dataset.h5_csv_path,'test')
-    elif model_name in ['PSA_MIL', 'STABLE_MIL']:
-        test_ds = WSI_Coord_Dataset(test_dataset_csv,'test')
-    else:
-        test_ds = WSI_Dataset(test_dataset_csv,'test')
+    test_ds = build_wsi_dataset(test_dataset_csv, 'test', yaml_args.Dataset)
     test_dataloader = DataLoader(test_ds,batch_size=1,shuffle=False)
     model_weight_path = args.ckpt_path
     print(f"Model weight path: {model_weight_path}")
@@ -102,6 +96,7 @@ def main(args):
 if __name__ == "__main__":    
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--yaml_path', type=str,default = '',help='path to yaml file')
+    argparser.add_argument('--input_path', type=str, default=None, help='path to shared input yaml file')
     argparser.add_argument('--seed', type=int,default = 42, help='seed for reproducibility')
     argparser.add_argument('--ckpt_path', type=str,default='',help='path to pretrained weights')
     argparser.add_argument('--save_path', type=str, default='',help='path to save the model')

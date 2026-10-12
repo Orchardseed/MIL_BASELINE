@@ -1,8 +1,5 @@
 import os
 
-import h5py
-import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -11,87 +8,13 @@ from utils.general_utils import add_epoch_info_log, early_stop, init_epoch_info_
 from utils.loop_utils import train_loop, val_loop
 from utils.model_utils import get_criterion, get_model_from_yaml, get_optimizer, get_scheduler, model_select, save_last_model, save_log
 from utils.process_utils import get_process_pipeline
-from utils.wsi_utils import WSI_Dataset
-
-
-class DAG_MIL_WSI_Dataset(WSI_Dataset):
-    """DAG_MIL dataset with optional external h5 coordinates.
-
-    It returns ``[N, in_dim + 2]`` when coordinates are available from the
-    feature file itself or from ``h5_csv_path``. If coords are absent, it returns
-    features only and DAG_MIL falls back to pseudo-grid coords.
-    """
-
-    def __init__(self, dataset_info_csv_path, group, h5_csv_path=None):
-        super(DAG_MIL_WSI_Dataset, self).__init__(dataset_info_csv_path, group)
-        self.h5_path_dict = {}
-        if h5_csv_path not in [None, '', 'null']:
-            if os.path.exists(h5_csv_path):
-                h5_paths = pd.read_csv(h5_csv_path)['h5_path'].dropna().values
-                self.h5_path_dict = {
-                    os.path.splitext(os.path.basename(h5_path))[0]: h5_path
-                    for h5_path in h5_paths
-                }
-            else:
-                print(f"Warning: h5_csv_path '{h5_csv_path}' not found. DAG_MIL will use feature-file coords or pseudo-grid coords.")
-
-    def __getitem__(self, idx):
-        slide_path = self.slide_path_list[idx]
-        label = torch.tensor(int(self.labels_list[idx]))
-        feat, coords = self._load_feature_and_coords(slide_path)
-
-        if len(feat.shape) == 3:
-            feat = feat.squeeze(0)
-        if coords is None:
-            coords = self._load_external_h5_coords(slide_path)
-        if coords is not None:
-            if len(coords.shape) == 3:
-                coords = coords.squeeze(0)
-            coords = coords.to(feat.device).float()
-            if coords.shape[0] == feat.shape[0] and coords.shape[-1] >= 2:
-                feat = torch.cat([feat, coords[:, :2]], dim=-1)
-        return feat, label
-
-    def _load_feature_and_coords(self, slide_path):
-        coords = None
-        if slide_path.endswith('.h5'):
-            with h5py.File(slide_path, 'r') as h5_file:
-                feat = torch.from_numpy(np.array(h5_file['features']))
-                if 'coords' in h5_file:
-                    coords = torch.from_numpy(np.array(h5_file['coords']))
-            return feat, coords
-
-        loaded = torch.load(slide_path)
-        if isinstance(loaded, dict):
-            if 'feats' in loaded:
-                feat = loaded['feats']
-            elif 'features' in loaded:
-                feat = loaded['features']
-            else:
-                raise ValueError(f"Unknown dict format in {slide_path}, keys: {list(loaded.keys())}")
-            if 'coords' in loaded:
-                coords = loaded['coords']
-            return feat, coords
-        return loaded, coords
-
-    def _load_external_h5_coords(self, slide_path):
-        if not self.h5_path_dict:
-            return None
-        slide_name = os.path.splitext(os.path.basename(slide_path))[0]
-        h5_path = self.h5_path_dict.get(slide_name)
-        if h5_path is None:
-            return None
-        with h5py.File(h5_path, 'r') as h5_file:
-            if 'coords' not in h5_file:
-                return None
-            return torch.from_numpy(np.array(h5_file['coords']))
+from utils.wsi_utils import build_wsi_dataset
 
 
 def process_DAG_MIL(args):
-    h5_csv_path = args.Dataset.h5_csv_path if hasattr(args.Dataset, 'h5_csv_path') else None
-    train_dataset = DAG_MIL_WSI_Dataset(args.Dataset.dataset_csv_path, 'train', h5_csv_path)
-    val_dataset = DAG_MIL_WSI_Dataset(args.Dataset.dataset_csv_path, 'val', h5_csv_path)
-    test_dataset = DAG_MIL_WSI_Dataset(args.Dataset.dataset_csv_path, 'test', h5_csv_path)
+    train_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'train', args.Dataset)
+    val_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'val', args.Dataset)
+    test_dataset = build_wsi_dataset(args.Dataset.dataset_csv_path, 'test', args.Dataset)
     process_pipeline = get_process_pipeline(val_dataset, test_dataset)
     args.General.process_pipeline = process_pipeline
 
